@@ -59,7 +59,7 @@ namespace uStyleBertVITS2.Services
             {
                 try
                 {
-                    var clip = _pipeline.Synthesize(request);
+                    var clip = await _pipeline.SynthesizeAsync(request, ct);
 
                     if (clip != null && _audioSource != null)
                     {

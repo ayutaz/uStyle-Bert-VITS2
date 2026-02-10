@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using Unity.Profiling;
 using UnityEngine;
 using uStyleBertVITS2.Data;
@@ -103,6 +105,88 @@ namespace uStyleBertVITS2.Services
             }
 
             // Stage 7: AudioClip生成
+            AudioClip clip;
+            using (s_Audio.Auto())
+            {
+                NormalizeSamples(audioSamples, _normalizationPeak);
+                clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
+                clip.SetData(audioSamples, 0);
+            }
+
+            return clip;
+        }
+
+        public async UniTask<AudioClip> SynthesizeAsync(TTSRequest request, CancellationToken ct = default)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TTSPipeline));
+
+            // --- ThreadPool: CPU処理 (G2P + Tokenize) ---
+            await UniTask.SwitchToThreadPool();
+
+            G2PResult g2p;
+            using (s_G2P.Auto())
+            {
+                g2p = _g2p.Process(request.Text);
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            int[] tokenIds;
+            int[] attentionMask;
+            using (s_Tokenize.Auto())
+            {
+                (tokenIds, attentionMask) = _tokenizer.Encode(request.Text);
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            // --- MainThread: BERT推論 (Sentis) ---
+            await UniTask.SwitchToMainThread(ct);
+
+            float[] bertData;
+            using (s_BertInfer.Auto())
+            {
+                bertData = _bert.Run(tokenIds, attentionMask);
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            // --- ThreadPool: BertAlignment + StyleVector ---
+            await UniTask.SwitchToThreadPool();
+
+            float[] alignedBert;
+            using (s_BertAlign.Auto())
+            {
+                alignedBert = BertAligner.AlignBertToPhonemes(
+                    bertData, tokenIds.Length, g2p.Word2Ph, g2p.PhonemeIds.Length);
+            }
+
+            float[] styleVec = _styleProvider.GetVector(request.StyleId, request.StyleWeight);
+
+            ct.ThrowIfCancellationRequested();
+
+            // --- MainThread: TTS推論 + AudioClip生成 ---
+            await UniTask.SwitchToMainThread(ct);
+
+            float[] audioSamples;
+            using (s_TTSInfer.Auto())
+            {
+                audioSamples = _tts.Run(
+                    g2p.PhonemeIds,
+                    g2p.Tones,
+                    g2p.LanguageIds,
+                    request.SpeakerId,
+                    alignedBert,
+                    styleVec,
+                    request.SdpRatio,
+                    request.NoiseScale,
+                    request.NoiseScaleW,
+                    request.LengthScale);
+            }
+
+            ct.ThrowIfCancellationRequested();
+
             AudioClip clip;
             using (s_Audio.Auto())
             {

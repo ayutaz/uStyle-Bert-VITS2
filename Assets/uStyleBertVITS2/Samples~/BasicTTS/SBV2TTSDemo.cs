@@ -1,3 +1,5 @@
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using uStyleBertVITS2.Configuration;
@@ -29,7 +31,9 @@ namespace uStyleBertVITS2.Samples
         [SerializeField, Range(0f, 1f)] private float _sdpRatio = 0.2f;
 
         private ITTSPipeline _pipeline;
+        private CancellationTokenSource _cts;
         private bool _isReady;
+        private bool _isSynthesizing;
 
         private void Awake()
         {
@@ -58,12 +62,17 @@ namespace uStyleBertVITS2.Samples
 
         private void OnSynthesizeClicked()
         {
-            if (!_isReady)
+            if (!_isReady || _isSynthesizing)
             {
-                SetStatus("Not ready yet...");
+                if (!_isReady) SetStatus("Not ready yet...");
                 return;
             }
 
+            SynthesizeAsync().Forget();
+        }
+
+        private async UniTaskVoid SynthesizeAsync()
+        {
             string text = _inputField != null ? _inputField.text : "こんにちは";
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -71,7 +80,13 @@ namespace uStyleBertVITS2.Samples
                 return;
             }
 
-            SetStatus("Synthesizing...");
+            _isSynthesizing = true;
+            if (_synthesizeButton != null) _synthesizeButton.interactable = false;
+            SetStatus("合成中...");
+
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = new CancellationTokenSource();
 
             try
             {
@@ -82,23 +97,32 @@ namespace uStyleBertVITS2.Samples
                     sdpRatio: _sdpRatio,
                     lengthScale: _speed);
 
-                var clip = _pipeline.Synthesize(request);
+                var clip = await _pipeline.SynthesizeAsync(request, _cts.Token);
 
                 if (clip != null && _audioSource != null)
                 {
                     _audioSource.clip = clip;
                     _audioSource.Play();
-                    SetStatus($"Playing ({clip.length:F1}s)");
+                    SetStatus($"再生中 ({clip.length:F1}s)");
                 }
                 else
                 {
-                    SetStatus("No audio generated.");
+                    SetStatus("音声が生成されませんでした。");
                 }
+            }
+            catch (System.OperationCanceledException)
+            {
+                SetStatus("キャンセルされました。");
             }
             catch (System.Exception e)
             {
                 SetStatus($"Error: {e.Message}");
                 Debug.LogError($"TTS synthesis failed: {e}");
+            }
+            finally
+            {
+                _isSynthesizing = false;
+                if (_synthesizeButton != null) _synthesizeButton.interactable = true;
             }
         }
 
@@ -110,6 +134,8 @@ namespace uStyleBertVITS2.Samples
 
         private void OnDestroy()
         {
+            _cts?.Cancel();
+            _cts?.Dispose();
             _pipeline?.Dispose();
         }
     }

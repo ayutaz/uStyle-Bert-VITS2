@@ -13,10 +13,8 @@ Style-Bert-VITS2（日本語TTS）のモデルをONNXに変換し、Unity Sentis
 
 ## セットアップ
 
-Sentisパッケージの追加（まだ`manifest.json`に未追加）:
-```
-Window > Package Manager > Add package by name > com.unity.ai.inference > 2.5.0
-```
+Sentisパッケージは `manifest.json` に追加済み（`com.unity.ai.inference: 2.5.0`）。
+手動でのセットアップは不要。
 
 ## アーキテクチャ: Style-Bert-VITS2 推論パイプライン
 

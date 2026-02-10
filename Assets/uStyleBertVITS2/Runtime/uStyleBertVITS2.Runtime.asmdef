@@ -2,7 +2,10 @@
     "name": "uStyleBertVITS2.Runtime",
     "rootNamespace": "uStyleBertVITS2",
     "references": [
-        "Unity.InferenceEngine"
+        "Unity.InferenceEngine",
+        "UniTask",
+        "UniTask.Linq",
+        "Unity.Burst"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

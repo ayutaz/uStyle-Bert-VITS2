@@ -4,6 +4,7 @@
     "references": [
         "uStyleBertVITS2.Runtime",
         "Unity.InferenceEngine",
+        "Unity.Collections",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

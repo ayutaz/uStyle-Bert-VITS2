@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using Unity.Collections;
+using Unity.Jobs;
 using uStyleBertVITS2.TextProcessing;
 
 namespace uStyleBertVITS2.Tests

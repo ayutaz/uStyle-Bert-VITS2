@@ -58,3 +58,6 @@ crashlytics-build.properties
 
 # Claude Code settings
 .claude/
+
+# Python virtual environment
+scripts/.venv/

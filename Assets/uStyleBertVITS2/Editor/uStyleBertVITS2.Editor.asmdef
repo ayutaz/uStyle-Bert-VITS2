@@ -1,0 +1,19 @@
+{
+    "name": "uStyleBertVITS2.Editor",
+    "rootNamespace": "uStyleBertVITS2.Editor",
+    "references": [
+        "uStyleBertVITS2.Runtime",
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

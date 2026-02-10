@@ -1,0 +1,16 @@
+{
+    "name": "uStyleBertVITS2.Runtime",
+    "rootNamespace": "uStyleBertVITS2",
+    "references": [
+        "Unity.InferenceEngine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

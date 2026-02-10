@@ -51,6 +51,10 @@ crashlytics-build.properties
 .idea/
 .vs/
 .vscode/
+.cursor/
+
+# MCP settings
+.mcp.json
 
 # Claude Code settings
 .claude/

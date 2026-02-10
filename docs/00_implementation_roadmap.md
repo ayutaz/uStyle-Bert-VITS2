@@ -107,11 +107,7 @@ Phase 0: プロジェクト基盤 [Done]
 
 ### テスト項目
 
-| テスト名 | 種別 | 内容 |
-|---|---|---|
-| `ModelImportTests.ONNXFilesExist` | Editor | ONNXファイルの存在確認 |
-| `ModelImportTests.BertModelLoadsSuccessfully` | Editor | DeBERTaモデルのロード |
-| `ModelImportTests.TTSModelLoadsSuccessfully` | Editor | TTSモデルのロード |
+> Phase 0 のテスト（ModelImportTests）はONNXモデルファイル配置後に実装予定。現在はテストなし。
 
 ---
 
@@ -262,16 +258,18 @@ DeBERTa用の文字レベルトークナイザを実装する。モデル推論�
 |---|---|---|
 | `G2PTests.OpenJTalkInitializes` | Runtime | OpenJTalkの初期化 |
 | `G2PTests.Process_Konnichiwa_ReturnsPhonemes` | Runtime | "こんにちは"の音素変換 |
-| `G2PTests.Process_PhonemeIdsNonEmpty` | Runtime | 音素IDが非空 |
 | `G2PTests.Process_ArrayLengthsMatch` | Runtime | 各配列の長さ一致 |
 | `G2PTests.Process_AllLanguageIdsAreJapanese` | Runtime | 言語IDが全てJP |
 | `G2PTests.Process_Word2PhSumMatchesPhonemeLength` | Runtime | word2phの合計一致 |
-| `G2PTests.PhonemeMapper_ClMapsToQ` | Runtime | cl→qのマッピング |
-| `G2PTests.PhonemeMapper_PauMapsToSP` | Runtime | pau→SPのマッピング |
-| `G2PTests.ToneValues_HaveCorrectOffset` | Runtime | トーンオフセット検証 |
 | `G2PTests.Process_LongText` | Runtime | 長文の処理 |
 | `G2PTests.Process_Punctuation` | Runtime | 句読点の処理 |
 | `G2PTests.Dispose_ReleasesNativeResources` | Runtime | ネイティブリソース解放 |
+| `PhonemeMapperTests.PhonemeMapper_ClMapsToQ` | Runtime | cl→qのマッピング |
+| `PhonemeMapperTests.PhonemeMapper_PauMapsToSP` | Runtime | pau→SPのマッピング |
+| `PhonemeMapperTests.ToneValues_HaveCorrectOffset` | Runtime | トーンオフセット検証 |
+| `PhonemeMapperTests.BasicPhonemes_Resolve` | Runtime | 基本音素の解決確認 |
+
+> G2PTests はOpenJTalk DLLが必要（Skip状態）。PhonemeMapperTests はDLL不要で常時実行可能。
 
 ---
 
@@ -318,15 +316,15 @@ DeBERTaとSynthesizerTrnのSentis推論ラッパーを実装する。各モデ�
 
 | テスト名 | 種別 | 内容 |
 |---|---|---|
-| `InferenceTests.BertRunner_Loads` | Runtime | BertRunnerのロード |
-| `InferenceTests.BertRunner_RunDummy` | Runtime | ダミー入力での推論 |
-| `InferenceTests.BertRunner_OutputShape` | Runtime | 出力shapeの検証 |
-| `InferenceTests.SBV2Runner_Loads` | Runtime | SBV2ModelRunnerのロード |
-| `InferenceTests.SBV2Runner_RunDummy` | Runtime | ダミー入力での推論 |
-| `InferenceTests.SBV2Runner_OutputNonEmpty` | Runtime | 出力が非空 |
-| `InferenceTests.BertRunner_Dispose` | Runtime | リソース解放 |
-| `InferenceTests.SBV2Runner_Dispose` | Runtime | リソース解放 |
-| `InferenceTests.FallbackBackend` | Runtime | バックエンドフォールバック |
+| `InferenceTests.BertRunner_Dispose` | Runtime | Dispose安全性の検証 |
+| `InferenceTests.SBV2Runner_Dispose` | Runtime | Dispose安全性の検証 |
+| `InferenceTests.ModelAssetManager_CreateAndDispose` | Runtime | 生成とDispose |
+| `InferenceTests.ModelAssetManager_DoubleDispose` | Runtime | 二重Disposeの安全性 |
+| `InferenceTests.ModelAssetManager_HasWorker_ReturnsFalse` | Runtime | 未登録Workerの確認 |
+
+> 以下はONNXモデル配置後に有効化予定（コメントアウト中）:
+> BertRunner_Loads, BertRunner_RunDummy, BertRunner_OutputShape,
+> SBV2Runner_Loads, SBV2Runner_RunDummy, SBV2Runner_OutputNonEmpty, FallbackBackend
 
 ---
 
@@ -379,11 +377,11 @@ word2ph: 各トークンに対応する音素数
 | `BertAlignerTests.AlignMatchesPhoneSeqLen` | Runtime | 出力長の一致 |
 | `BertAlignerTests.Word2PhSumConsistency` | Runtime | word2ph合計の整合性 |
 | `BertAlignerTests.SingleTokenExpansion` | Runtime | 単一トークンの展開 |
-| `BertAlignerTests.CrossValidation` | Runtime | Python出力との比較 |
-| `PipelineTests.SynthesizeReturnsAudioClip` | Runtime | AudioClipの返却 |
-| `PipelineTests.AudioClipSampleRate44100` | Runtime | サンプルレート検証 |
-| `PipelineTests.AudioClipHasSamples` | Runtime | サンプル数が非ゼロ |
-| `PipelineTests.DisposeCleansUp` | Runtime | リソースクリーンアップ |
+| `BertAlignerTests.ThrowsOnMismatchedSum` | Runtime | 不一致時の例外 |
+| `PipelineTests.Placeholder_PipelineTestsRequireFullSetup` | Runtime | E2Eテストのプレースホルダー |
+
+> PipelineTests のE2Eテスト（SynthesizeReturnsAudioClip, AudioClipSampleRate44100,
+> AudioClipHasSamples, DisposeCleansUp）はモデル+DLL配置後に有効化予定（コメントアウト中）。
 
 ---
 
@@ -400,7 +398,7 @@ float32 PCM → AudioClip変換を実装し、初めて人間が聴ける音声�
 | `Runtime/Core/Audio/TTSAudioUtility.cs` | PCM→AudioClip変換 + 正規化 |
 | `Runtime/Core/Audio/AudioClipGenerator.cs` | バッチAudioClip生成 |
 | `Samples~/BasicTTS/SBV2TTSDemo.cs` | 最小デモMonoBehaviour |
-| `Samples~/BasicTTS/SampleScene.unity` | テストシーン |
+| `Samples~/BasicTTS/SampleScene.unity` | UIレイアウト付きテストシーン |
 
 ### 実装仕様の要点
 

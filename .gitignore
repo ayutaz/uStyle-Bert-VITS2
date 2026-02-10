@@ -59,5 +59,8 @@ crashlytics-build.properties
 # Claude Code settings
 .claude/
 
+# uLoop MCP tool
+.uloop/
+
 # Python virtual environment
 scripts/.venv/

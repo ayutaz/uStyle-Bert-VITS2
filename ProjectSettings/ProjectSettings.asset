@@ -619,7 +619,7 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Standalone: ULOOPMCP_HAS_ROSLYN
+    Standalone: ULOOPMCP_HAS_ROSLYN;APP_UI_EDITOR_ONLY
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

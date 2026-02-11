@@ -65,6 +65,11 @@ crashlytics-build.properties
 # Python virtual environment
 scripts/.venv/
 
+# Python cache and build artifacts
+scripts/__pycache__/
+scripts/.cache/
+scripts/_sbv2_src/
+
 # Large binary assets (models, DLL, dictionaries)
 Assets/StreamingAssets/uStyleBertVITS2/Models/
 Assets/StreamingAssets/uStyleBertVITS2/OpenJTalkDic/

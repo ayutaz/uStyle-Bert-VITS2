@@ -3,31 +3,27 @@
     {
       "name": "OpenUPM",
       "url": "https://package.openupm.com",
-      "scopes": ["org.nuget"]
+      "scopes": [
+        "org.nuget"
+      ]
     }
   ],
   "dependencies": {
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10",
-    "com.cysharp.zstring": "https://github.com/Cysharp/ZString.git?path=src/ZString.Unity/Assets/Scripts/ZString#2.6.0",
     "com.unity.ai.inference": "2.5.0",
-    "io.github.hatayama.uloopmcp": "https://github.com/hatayama/uLoopMCP.git?path=/Packages/src",
-    "org.nuget.microsoft.codeanalysis.csharp": "4.14.0",
     "com.unity.ide.rider": "3.0.38",
     "com.unity.ide.visualstudio": "2.0.26",
+    "com.unity.recorder": "5.1.4",
     "com.unity.test-framework": "1.6.0",
     "com.unity.ugui": "2.0.0",
-    "com.unity.modules.accessibility": "1.0.0",
+    "io.github.hatayama.uloopmcp": "https://github.com/hatayama/uLoopMCP.git?path=/Packages/src",
+    "org.nuget.microsoft.codeanalysis.csharp": "4.14.0",
     "com.unity.modules.animation": "1.0.0",
-    "com.unity.modules.assetbundle": "1.0.0",
     "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.imageconversion": "1.0.0",
     "com.unity.modules.imgui": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
     "com.unity.modules.ui": "1.0.0",
-    "com.unity.modules.uielements": "1.0.0",
-    "com.unity.modules.unityanalytics": "1.0.0",
-    "com.unity.modules.unitywebrequest": "1.0.0",
-    "com.unity.modules.unitywebrequestaudio": "1.0.0",
-    "com.unity.modules.unitywebrequesttexture": "1.0.0"
+    "com.unity.modules.uielements": "1.0.0"
   }
 }

@@ -13,8 +13,8 @@ namespace uStyleBertVITS2.Tests.Editor
         {
             var settings = ScriptableObject.CreateInstance<TTSSettings>();
 
-            Assert.AreEqual(BackendType.GPUCompute, settings.PreferredBackend);
-            Assert.AreEqual(BackendType.CPU, settings.FallbackBackend);
+            Assert.AreEqual(BackendType.CPU, settings.BertBackend);
+            Assert.AreEqual(BackendType.GPUCompute, settings.TTSBackend);
             Assert.AreEqual(0.2f, settings.DefaultSdpRatio, 1e-6f);
             Assert.AreEqual(0.6f, settings.DefaultNoiseScale, 1e-6f);
             Assert.AreEqual(0.8f, settings.DefaultNoiseScaleW, 1e-6f);

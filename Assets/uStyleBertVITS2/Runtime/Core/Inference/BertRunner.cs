@@ -5,34 +5,41 @@ namespace uStyleBertVITS2.Inference
 {
     /// <summary>
     /// DeBERTa (ku-nlp/deberta-v2-large-japanese-char-wwm) 推論ラッパー。
-    /// 入力: tokenIds, attentionMask, tokenTypeIds
+    /// 入力: tokenIds, attentionMask
     /// 出力: [1, 1024, token_len] の BERT 埋め込み (flattened float[])
-    /// 静的エクスポートモデルの場合、入力を maxSeqLen にパディングし、出力を実際のトークン長にトリムする。
+    /// Sentis はモデルの固定 shape を要求するため、入力を padLen にパディングし、
+    /// 出力は実際のトークン長にトリムして返す。
+    /// padLen はモデルの入力 shape から自動取得する。
     /// </summary>
     public class BertRunner : IDisposable
     {
         private const int HiddenSize = 1024;
 
         private Worker _worker;
-        private readonly int _maxSeqLen;
+        private readonly int _padLen;
         private bool _disposed;
 
-        public BertRunner(ModelAsset modelAsset, BackendType backendType, int maxSeqLen = 50)
+        public BertRunner(ModelAsset modelAsset, BackendType backendType)
         {
             var model = ModelLoader.Load(modelAsset);
+            _padLen = GetSeqLenFromModel(model);
             _worker = new Worker(model, backendType);
-            _maxSeqLen = maxSeqLen;
         }
 
-        internal BertRunner(Model model, BackendType backendType, int maxSeqLen = 50)
+        internal BertRunner(Model model, BackendType backendType)
         {
+            _padLen = GetSeqLenFromModel(model);
             _worker = new Worker(model, backendType);
-            _maxSeqLen = maxSeqLen;
         }
 
         /// <summary>
+        /// モデルが要求する固定シーケンス長。
+        /// </summary>
+        public int PadLen => _padLen;
+
+        /// <summary>
         /// DeBERTa推論を実行する。
-        /// 入力が maxSeqLen より短い場合はゼロパディングし、出力は実トークン長にトリムして返す。
+        /// 入力を padLen にゼロパディングし、出力は実トークン長にトリムして返す。
         /// </summary>
         /// <param name="tokenIds">[CLS] ... [SEP] のトークンID配列</param>
         /// <param name="attentionMask">アテンションマスク (有効トークン=1)</param>
@@ -43,17 +50,19 @@ namespace uStyleBertVITS2.Inference
                 throw new ObjectDisposedException(nameof(BertRunner));
 
             int tokenLen = tokenIds.Length;
-            int padLen = _maxSeqLen;
+            if (tokenLen > _padLen)
+                throw new ArgumentException(
+                    $"Token length {tokenLen} exceeds model capacity {_padLen}. " +
+                    "Re-export the ONNX model with a larger seq_len.");
 
-            // パディング: tokenIds, attentionMask を maxSeqLen に合わせる
-            int[] paddedIds = new int[padLen];
-            int[] paddedMask = new int[padLen];
-            int copyLen = Math.Min(tokenLen, padLen);
-            Array.Copy(tokenIds, paddedIds, copyLen);
-            Array.Copy(attentionMask, paddedMask, copyLen);
+            // パディング: tokenIds, attentionMask を padLen に合わせる
+            int[] paddedIds = new int[_padLen];
+            int[] paddedMask = new int[_padLen];
+            Array.Copy(tokenIds, paddedIds, tokenLen);
+            Array.Copy(attentionMask, paddedMask, tokenLen);
 
-            using var inputIds = new Tensor<int>(new TensorShape(1, padLen), paddedIds);
-            using var mask = new Tensor<int>(new TensorShape(1, padLen), paddedMask);
+            using var inputIds = new Tensor<int>(new TensorShape(1, _padLen), paddedIds);
+            using var mask = new Tensor<int>(new TensorShape(1, _padLen), paddedMask);
 
             _worker.SetInput("input_ids", inputIds);
             _worker.SetInput("attention_mask", mask);
@@ -64,23 +73,25 @@ namespace uStyleBertVITS2.Inference
             float[] fullOutput = output.DownloadToArray(); // [1, 1024, padLen]
 
             // 出力トリム: 実際のトークン長分だけ返す
-            if (tokenLen >= padLen)
+            if (tokenLen == _padLen)
                 return fullOutput;
 
             float[] trimmed = new float[HiddenSize * tokenLen];
             for (int h = 0; h < HiddenSize; h++)
             {
-                Array.Copy(fullOutput, h * padLen, trimmed, h * tokenLen, tokenLen);
+                Array.Copy(fullOutput, h * _padLen, trimmed, h * tokenLen, tokenLen);
             }
             return trimmed;
         }
 
-        /// <summary>
-        /// 出力テンソルの token_len 次元を返す。
-        /// </summary>
-        public int GetOutputTokenLen(int inputTokenLen)
+        private static int GetSeqLenFromModel(Model model)
         {
-            return inputTokenLen;
+            foreach (var input in model.inputs)
+            {
+                if (input.name == "input_ids" && input.shape.rank >= 2)
+                    return input.shape.Get(1);
+            }
+            return 50; // fallback
         }
 
         public void Dispose()

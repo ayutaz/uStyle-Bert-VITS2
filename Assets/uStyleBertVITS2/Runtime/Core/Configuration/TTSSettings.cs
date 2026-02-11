@@ -17,11 +17,11 @@ namespace uStyleBertVITS2.Configuration
         public ModelAsset TTSModel;
 
         [Header("Backend")]
-        [Tooltip("推論バックエンド (GPUCompute推奨)")]
-        public BackendType PreferredBackend = BackendType.GPUCompute;
+        [Tooltip("BERT推論バックエンド (DeBERTaが大きいためCPU推奨)")]
+        public BackendType BertBackend = BackendType.CPU;
 
-        [Tooltip("フォールバック用バックエンド")]
-        public BackendType FallbackBackend = BackendType.CPU;
+        [Tooltip("TTS推論バックエンド (GPUCompute推奨)")]
+        public BackendType TTSBackend = BackendType.GPUCompute;
 
         [Header("Default Parameters")]
         [Range(0f, 1f)]

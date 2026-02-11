@@ -171,13 +171,11 @@ def export_onnx(
     no_dynamic: bool = False,
     no_simplify: bool = False,
     opset_version: int = 15,
+    seq_len: int = 128,
 ):
     """モデルを Sentis 互換 ONNX にエクスポート"""
     device = "cpu"
     is_jp_extra = hps.version.endswith("JP-Extra")
-
-    # ダミー入力を作成
-    seq_len = 20
     x_tst = torch.randint(0, 100, (1, seq_len), dtype=torch.long, device=device)
     x_tst_lengths = torch.tensor([seq_len], dtype=torch.long, device=device)
     sid = torch.tensor([0], dtype=torch.long, device=device)
@@ -373,6 +371,12 @@ def main():
         help="Skip onnxsim simplification",
     )
     parser.add_argument(
+        "--seq-len",
+        type=int,
+        default=128,
+        help="Sequence length for dummy input (default: 128)",
+    )
+    parser.add_argument(
         "--cache-dir",
         type=str,
         default=".cache/sbv2",
@@ -401,6 +405,7 @@ def main():
         net_g, hps, Path(args.output),
         no_fp16=args.no_fp16, no_dynamic=args.no_dynamic,
         no_simplify=args.no_simplify,
+        seq_len=args.seq_len,
     )
 
 

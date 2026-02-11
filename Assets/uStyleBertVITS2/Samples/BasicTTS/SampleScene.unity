@@ -1934,6 +1934,7 @@ GameObject:
   - component: {fileID: 2078198152}
   - component: {fileID: 2078198151}
   - component: {fileID: 2078198150}
+  - component: {fileID: 2078198154}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -2112,6 +2113,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2078198154
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2078198149}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0c13cfca7df53b498342c5e2b76bc94, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::uStyleBertVITS2.Samples.SBV2TTSDemo
+  _settings: {fileID: 11400000, guid: ae9a54d12ca3b784e9add90c0aaa18e3, type: 2}
+  _inputField: {fileID: 592223291}
+  _synthesizeButton: {fileID: 1363176700}
+  _statusText: {fileID: 1076841201}
+  _audioSource: {fileID: 2078198150}
+  _speakerId: 0
+  _styleId: 0
+  _speed: 1
+  _sdpRatio: 0.2
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using Unity.Profiling;
 using UnityEngine;
 using uStyleBertVITS2.Data;
+using uStyleBertVITS2.Diagnostics;
 using uStyleBertVITS2.Inference;
 using uStyleBertVITS2.TextProcessing;
 
@@ -54,12 +55,29 @@ namespace uStyleBertVITS2.Services
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TTSPipeline));
 
+            TTSDebugLog.Log("TTS", $"=== Synthesize: \"{request.Text}\" ===");
+
             // Stage 1: G2P
             G2PResult g2p;
             using (s_G2P.Auto())
             {
                 g2p = _g2p.Process(request.Text);
             }
+
+            TTSDebugLog.Log("TTS.G2P",
+                $"PhonemeIds.Length={g2p.PhonemeIds.Length}, " +
+                $"Tones range=[{ArrayMin(g2p.Tones)},{ArrayMax(g2p.Tones)}], " +
+                $"Word2Ph.Length={g2p.Word2Ph.Length}");
+
+            // Stage 1.5: add_blank — 学習時と同じ前処理
+            int[] phonemeIds = PhonemeUtils.Intersperse(g2p.PhonemeIds, 0);
+            int[] tones = PhonemeUtils.Intersperse(g2p.Tones, 0);
+            int[] languageIds = PhonemeUtils.Intersperse(g2p.LanguageIds, 0);
+            int[] word2ph = PhonemeUtils.AdjustWord2PhForBlanks(g2p.Word2Ph);
+            int phoneSeqLen = phonemeIds.Length;
+
+            TTSDebugLog.Log("TTS.Blank",
+                $"Interleaved: {g2p.PhonemeIds.Length} → {phoneSeqLen} phonemes");
 
             // Stage 2: DeBERTa トークナイズ
             int[] tokenIds;
@@ -69,6 +87,8 @@ namespace uStyleBertVITS2.Services
                 (tokenIds, attentionMask) = _tokenizer.Encode(request.Text);
             }
 
+            TTSDebugLog.Log("TTS.Tokenize", $"tokenIds.Length={tokenIds.Length}");
+
             // Stage 3: BERT推論
             float[] bertData;
             using (s_BertInfer.Auto())
@@ -76,13 +96,19 @@ namespace uStyleBertVITS2.Services
                 bertData = _bert.Run(tokenIds, attentionMask);
             }
 
+            TTSDebugLog.Log("TTS.BERT",
+                $"bertData.Length={bertData.Length} ({tokenIds.Length} tokens × 1024 dim)");
+
             // Stage 4: word2phアライメント
             float[] alignedBert;
             using (s_BertAlign.Auto())
             {
                 alignedBert = BertAligner.AlignBertToPhonemes(
-                    bertData, tokenIds.Length, g2p.Word2Ph, g2p.PhonemeIds.Length);
+                    bertData, tokenIds.Length, word2ph, phoneSeqLen);
             }
+
+            TTSDebugLog.Log("TTS.Align",
+                $"alignedBert.Length={alignedBert.Length} ({phoneSeqLen} phonemes × 1024 dim)");
 
             // Stage 5: スタイルベクトル取得
             float[] styleVec = _styleProvider.GetVector(request.StyleId, request.StyleWeight);
@@ -92,9 +118,9 @@ namespace uStyleBertVITS2.Services
             using (s_TTSInfer.Auto())
             {
                 audioSamples = _tts.Run(
-                    g2p.PhonemeIds,
-                    g2p.Tones,
-                    g2p.LanguageIds,
+                    phonemeIds,
+                    tones,
+                    languageIds,
                     request.SpeakerId,
                     alignedBert,
                     styleVec,
@@ -104,11 +130,15 @@ namespace uStyleBertVITS2.Services
                     request.LengthScale);
             }
 
+            TTSDebugLog.Log("TTS.Model",
+                $"audioSamples.Length={audioSamples.Length} ({(float)audioSamples.Length / _sampleRate:F2}s @ {_sampleRate}Hz)");
+
             // Stage 7: AudioClip生成
             AudioClip clip;
             using (s_Audio.Auto())
             {
                 NormalizeSamples(audioSamples, _normalizationPeak);
+                audioSamples = TrimTrailingSilence(audioSamples);
                 clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
                 clip.SetData(audioSamples, 0);
             }
@@ -121,6 +151,8 @@ namespace uStyleBertVITS2.Services
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TTSPipeline));
 
+            TTSDebugLog.Log("TTS", $"=== SynthesizeAsync: \"{request.Text}\" ===");
+
             // --- ThreadPool: CPU処理 (G2P + Tokenize) ---
             await UniTask.SwitchToThreadPool();
 
@@ -130,6 +162,21 @@ namespace uStyleBertVITS2.Services
                 g2p = _g2p.Process(request.Text);
             }
 
+            TTSDebugLog.Log("TTS.G2P",
+                $"PhonemeIds.Length={g2p.PhonemeIds.Length}, " +
+                $"Tones range=[{ArrayMin(g2p.Tones)},{ArrayMax(g2p.Tones)}], " +
+                $"Word2Ph.Length={g2p.Word2Ph.Length}");
+
+            // Stage 1.5: add_blank — 学習時と同じ前処理
+            int[] phonemeIds = PhonemeUtils.Intersperse(g2p.PhonemeIds, 0);
+            int[] tones = PhonemeUtils.Intersperse(g2p.Tones, 0);
+            int[] languageIds = PhonemeUtils.Intersperse(g2p.LanguageIds, 0);
+            int[] word2ph = PhonemeUtils.AdjustWord2PhForBlanks(g2p.Word2Ph);
+            int phoneSeqLen = phonemeIds.Length;
+
+            TTSDebugLog.Log("TTS.Blank",
+                $"Interleaved: {g2p.PhonemeIds.Length} → {phoneSeqLen} phonemes");
+
             ct.ThrowIfCancellationRequested();
 
             int[] tokenIds;
@@ -138,6 +185,8 @@ namespace uStyleBertVITS2.Services
             {
                 (tokenIds, attentionMask) = _tokenizer.Encode(request.Text);
             }
+
+            TTSDebugLog.Log("TTS.Tokenize", $"tokenIds.Length={tokenIds.Length}");
 
             ct.ThrowIfCancellationRequested();
 
@@ -150,6 +199,9 @@ namespace uStyleBertVITS2.Services
                 bertData = _bert.Run(tokenIds, attentionMask);
             }
 
+            TTSDebugLog.Log("TTS.BERT",
+                $"bertData.Length={bertData.Length} ({tokenIds.Length} tokens × 1024 dim)");
+
             ct.ThrowIfCancellationRequested();
 
             // --- ThreadPool: BertAlignment + StyleVector ---
@@ -159,8 +211,11 @@ namespace uStyleBertVITS2.Services
             using (s_BertAlign.Auto())
             {
                 alignedBert = BertAligner.AlignBertToPhonemes(
-                    bertData, tokenIds.Length, g2p.Word2Ph, g2p.PhonemeIds.Length);
+                    bertData, tokenIds.Length, word2ph, phoneSeqLen);
             }
+
+            TTSDebugLog.Log("TTS.Align",
+                $"alignedBert.Length={alignedBert.Length} ({phoneSeqLen} phonemes × 1024 dim)");
 
             float[] styleVec = _styleProvider.GetVector(request.StyleId, request.StyleWeight);
 
@@ -173,9 +228,9 @@ namespace uStyleBertVITS2.Services
             using (s_TTSInfer.Auto())
             {
                 audioSamples = _tts.Run(
-                    g2p.PhonemeIds,
-                    g2p.Tones,
-                    g2p.LanguageIds,
+                    phonemeIds,
+                    tones,
+                    languageIds,
                     request.SpeakerId,
                     alignedBert,
                     styleVec,
@@ -185,17 +240,77 @@ namespace uStyleBertVITS2.Services
                     request.LengthScale);
             }
 
+            TTSDebugLog.Log("TTS.Model",
+                $"audioSamples.Length={audioSamples.Length} ({(float)audioSamples.Length / _sampleRate:F2}s @ {_sampleRate}Hz)");
+
             ct.ThrowIfCancellationRequested();
 
             AudioClip clip;
             using (s_Audio.Auto())
             {
                 NormalizeSamples(audioSamples, _normalizationPeak);
+                audioSamples = TrimTrailingSilence(audioSamples);
                 clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
                 clip.SetData(audioSamples, 0);
             }
 
             return clip;
+        }
+
+        private static int ArrayMin(int[] arr)
+        {
+            int min = arr[0];
+            for (int i = 1; i < arr.Length; i++)
+                if (arr[i] < min) min = arr[i];
+            return min;
+        }
+
+        private static int ArrayMax(int[] arr)
+        {
+            int max = arr[0];
+            for (int i = 1; i < arr.Length; i++)
+                if (arr[i] > max) max = arr[i];
+            return max;
+        }
+
+        /// <summary>
+        /// 末尾の無音区間を除去する。
+        /// パディングやデコーダの出力サイズ切り上げで生じる末尾の完全無音を取り除く。
+        /// ピーク振幅ベースでブロック単位に判定し、有音ブロックが見つかったら停止する。
+        /// </summary>
+        private static float[] TrimTrailingSilence(float[] samples)
+        {
+            const int blockSize = 512; // 1 フレーム = hop_length
+            const float silenceThreshold = 0.002f; // ピーク振幅閾値
+
+            int totalBlocks = samples.Length / blockSize;
+            if (totalBlocks <= 1)
+                return samples;
+
+            // 末尾からブロック単位でピーク振幅を確認し、無音ブロックをスキップ
+            int lastActiveBlock = totalBlocks - 1;
+            while (lastActiveBlock > 0)
+            {
+                int start = lastActiveBlock * blockSize;
+                float peak = 0f;
+                for (int i = start; i < start + blockSize && i < samples.Length; i++)
+                {
+                    float abs = samples[i] < 0 ? -samples[i] : samples[i];
+                    if (abs > peak) peak = abs;
+                }
+
+                if (peak > silenceThreshold)
+                    break;
+                lastActiveBlock--;
+            }
+
+            int trimmedLength = (lastActiveBlock + 1) * blockSize;
+            if (trimmedLength >= samples.Length)
+                return samples;
+
+            var result = new float[trimmedLength];
+            Array.Copy(samples, result, trimmedLength);
+            return result;
         }
 
         /// <summary>

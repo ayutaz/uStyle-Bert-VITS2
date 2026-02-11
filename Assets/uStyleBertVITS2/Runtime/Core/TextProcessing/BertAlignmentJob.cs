@@ -14,7 +14,7 @@ namespace uStyleBertVITS2.TextProcessing
     {
         [ReadOnly] public NativeArray<float> BertFlat;
         [ReadOnly] public NativeArray<int> PhoneToToken;
-        [WriteOnly] public NativeArray<float> AlignedBert;
+        [NativeDisableParallelForRestriction] public NativeArray<float> AlignedBert;
 
         public int TokenLen;
         public int PhoneSeqLen;

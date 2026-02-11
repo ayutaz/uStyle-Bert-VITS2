@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using uStyleBertVITS2.Configuration;
+using uStyleBertVITS2.Diagnostics;
 using uStyleBertVITS2.Services;
 
 namespace uStyleBertVITS2.Samples
@@ -43,6 +44,7 @@ namespace uStyleBertVITS2.Samples
 
         private void Start()
         {
+            TTSDebugLog.Enabled = true;
             SetStatus("Initializing...");
 
             try

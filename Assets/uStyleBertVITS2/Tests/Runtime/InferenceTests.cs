@@ -135,14 +135,14 @@ namespace uStyleBertVITS2.Tests
             var asset = LoadModelAsset(SBV2AssetPath);
             using var runner = new SBV2ModelRunner(asset, BackendType.CPU);
 
-            // モデルは seq_len=20 で静的エクスポート済み
-            int seqLen = 20;
+            // padLen 以下の任意 seqLen でパディングされて推論される
+            int seqLen = 5;
             int[] phonemeIds = new int[seqLen];
             int[] tones = new int[seqLen];
             int[] langIds = new int[seqLen];
-            // 先頭と末尾に SP (0)、中間にダミー音素
+            // 先頭と末尾に SP (0)、中間にダミー音素 (tone=0/1)
             phonemeIds[0] = 0; phonemeIds[seqLen - 1] = 0;
-            for (int i = 1; i < seqLen - 1; i++) { phonemeIds[i] = 23; tones[i] = 7; langIds[i] = 1; }
+            for (int i = 1; i < seqLen - 1; i++) { phonemeIds[i] = 23; tones[i] = 1; langIds[i] = 1; }
             float[] jaBert = new float[1024 * seqLen];
             float[] style = new float[256];
 

@@ -3,7 +3,7 @@ DeBERTa (ku-nlp/deberta-v2-large-japanese-char-wwm) ONNX変換スクリプト
 
 処理フロー:
 1. HuggingFace から DeBERTa モデルをロード
-2. 最終3隠れ層を結合するラッパーモデルを作成
+2. 隠れ層 -3 を選択するラッパーモデルを作成
 3. torch.onnx.export() で opset 15 エクスポート
 4. onnxsim 簡略化
 5. int64→int32 キャスト
@@ -30,8 +30,8 @@ from convert_for_sentis import convert_int64_to_int32
 
 class DeBERTaWrapper(nn.Module):
     """
-    DeBERTaの最終3隠れ層を平均して[batch, 1024, token_len]形式で出力するラッパー。
-    Style-Bert-VITS2のBERT埋め込み仕様に準拠。
+    DeBERTaの隠れ層 -3 を選択し[batch, 1024, token_len]形式で出力するラッパー。
+    Style-Bert-VITS2のBERT埋め込み仕様に準拠（bert_feature.py:61 と同じ層を使用）。
     """
 
     def __init__(self, deberta_model):
@@ -46,8 +46,8 @@ class DeBERTaWrapper(nn.Module):
             output_hidden_states=True,
         )
         hidden_states = outputs.hidden_states
-        # 最終3層の平均
-        result = (hidden_states[-1] + hidden_states[-2] + hidden_states[-3]) / 3
+        # 隠れ層 -3 のみ (Python SBV2 bert_feature.py と同じ)
+        result = hidden_states[-3]
         return result.transpose(1, 2)  # [batch, 1024, token_len]
 
 
@@ -71,7 +71,7 @@ def main():
         "--no-fp16", action="store_true", help="Skip FP16 conversion"
     )
     parser.add_argument(
-        "--seq-len", type=int, default=50, help="Dummy sequence length for export"
+        "--seq-len", type=int, default=128, help="Dummy sequence length for export"
     )
     parser.add_argument(
         "--no-dynamic",

@@ -162,13 +162,11 @@ namespace uStyleBertVITS2.Tests
         }
 
         [Test]
-        public void ToneValues_HaveCorrectOffset()
+        public void PhonemeMapper_SpecialSymbolIndices()
         {
-            // トーンオフセットは+6
-            // tone=0 (Low) → 0+6=6, tone=1 (High) → 1+6=7
-            // これはJapaneseG2P内部のロジックだが、定数値を確認
-            Assert.AreEqual(8, _mapper.SpId, "SP should be at index 8");
-            Assert.AreEqual(38, _mapper.GetId("q"), "q(促音) should be at index 38");
+            // SP と q のインデックスが正しいことを確認（全言語統合112要素リスト）
+            Assert.AreEqual(110, _mapper.SpId, "SP should be at index 110");
+            Assert.AreEqual(73, _mapper.GetId("q"), "q(促音) should be at index 73");
         }
 
         [Test]

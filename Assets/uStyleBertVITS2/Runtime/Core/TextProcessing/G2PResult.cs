@@ -9,7 +9,7 @@ namespace uStyleBertVITS2.TextProcessing
         /// <summary>SBV2音素トークンID配列 [seq_len]</summary>
         public readonly int[] PhonemeIds;
 
-        /// <summary>トーン/アクセント配列 [seq_len] (+6オフセット済み)</summary>
+        /// <summary>トーン/アクセント配列 [seq_len] (日本語は6=低/7=高、オフセット+6適用済み)</summary>
         public readonly int[] Tones;
 
         /// <summary>言語ID配列 [seq_len] (JP-Extraでは全て1)</summary>

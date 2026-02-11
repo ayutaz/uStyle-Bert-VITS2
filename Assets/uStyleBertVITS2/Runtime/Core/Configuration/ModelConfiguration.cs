@@ -12,8 +12,8 @@ namespace uStyleBertVITS2.Configuration
     {
         public ModelAsset BertModelAsset { get; }
         public ModelAsset TTSModelAsset { get; }
-        public BackendType PreferredBackend { get; }
-        public BackendType FallbackBackend { get; }
+        public BackendType BertBackend { get; }
+        public BackendType TTSBackend { get; }
         public string DictionaryFullPath { get; }
         public string VocabFullPath { get; }
         public string StyleVectorFullPath { get; }
@@ -22,8 +22,8 @@ namespace uStyleBertVITS2.Configuration
         {
             BertModelAsset = settings.BertModel;
             TTSModelAsset = settings.TTSModel;
-            PreferredBackend = settings.PreferredBackend;
-            FallbackBackend = settings.FallbackBackend;
+            BertBackend = settings.BertBackend;
+            TTSBackend = settings.TTSBackend;
             DictionaryFullPath = Path.Combine(Application.streamingAssetsPath, settings.DictionaryPath);
             VocabFullPath = Path.Combine(Application.streamingAssetsPath, settings.VocabPath);
             StyleVectorFullPath = Path.Combine(Application.streamingAssetsPath, settings.StyleVectorPath);

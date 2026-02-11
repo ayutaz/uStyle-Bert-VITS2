@@ -23,8 +23,37 @@ from onnxconverter_common import float16
 from onnxsim import simplify
 
 
+def _convert_tensor_int64_to_int32(tensor: onnx.TensorProto) -> None:
+    """TensorProto 内の int64 データを int32 に変換する (in-place)。"""
+    if tensor.data_type != onnx.TensorProto.INT64:
+        return
+    if tensor.raw_data:
+        data = np.frombuffer(tensor.raw_data, dtype=np.int64).astype(np.int32)
+        tensor.raw_data = data.tobytes()
+    elif tensor.int64_data:
+        data = np.array(tensor.int64_data, dtype=np.int64).astype(np.int32)
+        del tensor.int64_data[:]
+        tensor.int32_data.extend(data.tolist())
+    tensor.data_type = onnx.TensorProto.INT32
+
+
 def convert_int64_to_int32(model: onnx.ModelProto) -> onnx.ModelProto:
-    """ONNX モデル内の int64 テンソルを int32 に変換する。"""
+    """ONNX モデル内の全ての int64 テンソルを int32 に変換する。
+
+    Unity Sentis は int64 をサポートしないため、全ての int64 を int32 に統一する。
+    これは ONNX 仕様上は axes/shape 入力が int64 を要求するが、
+    Sentis は全て int32 で処理するため問題ない。
+    ※ onnxruntime での検証には変換前のモデルを使うこと。
+
+    変換対象:
+    - グラフ入力/出力の型宣言
+    - 初期化テンソル (weights)
+    - Constant ノードの value 属性
+    - Cast ノードの to=INT64 を to=INT32 に
+    - 中間テンソルの value_info
+    """
+    count = 0
+
     # グラフ入力
     for input_tensor in model.graph.input:
         if input_tensor.type.tensor_type.elem_type == onnx.TensorProto.INT64:
@@ -38,15 +67,31 @@ def convert_int64_to_int32(model: onnx.ModelProto) -> onnx.ModelProto:
     # 初期化テンソル (weights)
     for initializer in model.graph.initializer:
         if initializer.data_type == onnx.TensorProto.INT64:
-            if initializer.raw_data:
-                data = np.frombuffer(initializer.raw_data, dtype=np.int64).astype(np.int32)
-                initializer.raw_data = data.tobytes()
-            elif initializer.int64_data:
-                data = np.array(initializer.int64_data, dtype=np.int64).astype(np.int32)
-                initializer.int64_data[:] = []
-                initializer.int32_data.extend(data.tolist())
-            initializer.data_type = onnx.TensorProto.INT32
+            _convert_tensor_int64_to_int32(initializer)
+            count += 1
 
+    # Constant ノードの value 属性
+    for node in model.graph.node:
+        if node.op_type == "Constant":
+            for attr in node.attribute:
+                if attr.name == "value" and attr.t.data_type == onnx.TensorProto.INT64:
+                    _convert_tensor_int64_to_int32(attr.t)
+                    count += 1
+
+    # Cast ノードの to=INT64 を to=INT32 に変更
+    for node in model.graph.node:
+        if node.op_type == "Cast":
+            for attr in node.attribute:
+                if attr.name == "to" and attr.i == onnx.TensorProto.INT64:
+                    attr.i = onnx.TensorProto.INT32
+                    count += 1
+
+    # 中間テンソルの value_info
+    for vi in model.graph.value_info:
+        if vi.type.tensor_type.elem_type == onnx.TensorProto.INT64:
+            vi.type.tensor_type.elem_type = onnx.TensorProto.INT32
+
+    print(f"  Converted {count} int64 tensors/nodes to int32")
     return model
 
 

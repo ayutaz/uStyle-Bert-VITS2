@@ -72,9 +72,9 @@ namespace uStyleBertVITS2.Services
             _tokenizer ??= new SBV2Tokenizer(
                 Path.Combine(Application.streamingAssetsPath, _settings.VocabPath));
 
-            _bertRunner ??= new BertRunner(_settings.BertModel, _settings.PreferredBackend);
+            _bertRunner ??= new BertRunner(_settings.BertModel, _settings.BertBackend);
 
-            _ttsRunner ??= new SBV2ModelRunner(_settings.TTSModel, _settings.PreferredBackend);
+            _ttsRunner ??= new SBV2ModelRunner(_settings.TTSModel, _settings.TTSBackend);
 
             if (_styleProvider == null)
             {

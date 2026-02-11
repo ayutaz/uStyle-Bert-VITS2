@@ -7,7 +7,7 @@
 | SynthesizerTrn (メインTTS) | `*.safetensors` | FP16 | ~200-400MB |
 | DeBERTa-v2-large-japanese | `ku-nlp/deberta-v2-large-japanese-char-wwm` | FP16 | ~600MB |
 
-JP-Extra版のため `ja_bert` のみ使用。`en_bert` / `bert`(中国語) は不要。
+JP-Extra版のため BERT入力は `bert` 単一入力のみ（通常モデルの `ja_bert`/`bert`/`en_bert` 3入力ではない）。
 
 ---
 
@@ -43,7 +43,7 @@ sbv2-apiのRust実装 (`crates/sbv2_core/src/model.rs`) から確認した仕様
 
 **出力**: `output [1, 1024, token_len]` float32
 
-DeBERTaの出力は最終3隠れ層を結合した1024次元ベクトル。これをword2phアライメントで音素列長に展開してSynthesizerTrnに渡す。
+DeBERTaの出力は最終3番目の隠れ層 (hidden_states[-3]) を単独使用した1024次元ベクトル。これをword2phアライメントで音素列長に展開してSynthesizerTrnに渡す。
 
 ---
 
@@ -95,6 +95,10 @@ def convert_int64_to_int32(model_path, output_path):
 
     onnx.save(model, output_path)
 ```
+
+> **注意**: Sentis 2.5.0 は FP16 定数テンソルデータを直接インポートできない（ONNXConstantsLoader.GetTensorData でアサーション失敗）。DeBERTa は FP32 でエクスポートすること。
+
+> **int64→int32 変換の詳細**: SBV2 ONNX には 5000+ 個の Constant ノードが含まれ、入力・initializer だけでなく Constant ノード、Cast ノード、中間 value_info の int64 参照もすべて int32 に変換する必要がある。
 
 ---
 
@@ -152,6 +156,15 @@ model_fp16 = float16.convert_float_to_float16(model_simplified, keep_io_types=Tr
 onnx.save(model_fp16, "sbv2_model_fp16.onnx")
 ```
 
+### `scripts/convert_sbv2_for_sentis.py` — HuggingFaceからの一括変換
+
+HuggingFace上のSBV2モデルをダウンロードし、SynthesizerTrnをmonolithicにエクスポートするスクリプト。
+- `--no-fp16 --no-simplify` オプションで Sentis 互換の FP32 静的シェイプ ONNX を生成
+- int64→int32 変換を自動実行
+- config.json / style_vectors.npy も同時にダウンロード
+
+### `scripts/validate_onnx.py` — ONNX検証
+
 ### `scripts/convert_bert_for_sentis.py` — DeBERTa変換
 
 処理フロー:
@@ -176,11 +189,9 @@ class DeBERTaWrapper(torch.nn.Module):
             attention_mask=attention_mask,
             output_hidden_states=True
         )
-        # 最終3隠れ層を結合 → [batch, token_len, 768*3] or [batch, token_len, 1024]
-        # SBV2の実装に合わせて結合方法を確認すること
         hidden_states = outputs.hidden_states
-        # 最終3層の合計/結合
-        result = (hidden_states[-1] + hidden_states[-2] + hidden_states[-3]) / 3
+        # hidden_states[-3] を単独使用（SBV2の実装に準拠）
+        result = hidden_states[-3]
         return result.transpose(1, 2)  # [batch, 1024, token_len]
 ```
 

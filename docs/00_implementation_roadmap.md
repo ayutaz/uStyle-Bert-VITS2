@@ -140,7 +140,7 @@ Phase 0: プロジェクト基盤 [Done]
 - インデックス0 = ニュートラル参照ベクトル
 
 **TTSSettings**:
-- モデルパス、Backend（Preferred/Fallback）、デフォルトパラメータ、パフォーマンス設定
+- モデルパス、Backend（BertBackend=CPU推奨 / TTSBackend=GPUCompute推奨）、デフォルトパラメータ、パフォーマンス設定
 
 ### 検証チェックリスト
 
@@ -226,7 +226,7 @@ DeBERTa用の文字レベルトークナイザを実装する。モデル推論�
 ### 実装仕様の要点
 
 **SBV2PhonemeMapper**:
-- `config.json`のsymbolsリストから音素→IDの辞書を構築
+- ハードコードされた DefaultSymbols テーブル（112シンボル）から音素→ID辞書を構築
 - マッピング補正: `cl`→`q`, `pau`→`SP`, `sil`→`SP`
 
 **トーン配列生成**:
@@ -343,6 +343,8 @@ BERT埋め込みを音素列長に展開し、全コンポーネントを統合T
 | `Runtime/Core/Services/TTSPipeline.cs` | メインオーケストレータ |
 | `Runtime/Core/Services/TTSRequest.cs` | リクエストのreadonly struct |
 | `Runtime/Core/Services/TTSPipelineBuilder.cs` | Builderパターン |
+| `Runtime/Core/TextProcessing/PhonemeUtils.cs` | add_blank (Intersperse + AdjustWord2PhForBlanks) |
+| `Runtime/Core/TextProcessing/PhonemeCharacterAligner.cs` | かな→音素数テーブルによるword2ph計算 |
 
 ### 実装仕様の要点
 
@@ -355,6 +357,8 @@ word2ph: 各トークンに対応する音素数
 
 **TTSPipelineフロー**:
 1. `_g2p.Process(text)` → G2PResult
+1.5. `PhonemeUtils.Intersperse(phonemeIds, 0)` → add_blank (2N+1 音素)
+1.5. `PhonemeUtils.AdjustWord2PhForBlanks(word2ph)` → word2ph調整
 2. `_tokenizer.Encode(text)` → (tokenIds, attentionMask)
 3. `_bertRunner.Run(tokenIds, attentionMask)` → bertOutput
 4. `BertAligner.Align(bertOutput, word2ph, phoneSeqLen)` → alignedBert
@@ -448,6 +452,7 @@ UniTask非同期パイプライン、BERTキャッシュ、Burstジョブ、ウ�
 | `Runtime/Core/Inference/TTSWarmup.cs` | ウォームアップ推論 |
 | `Runtime/Core/TextProcessing/BertAlignmentJob.cs` | Burst IJobParallelFor |
 | `Runtime/Core/Audio/NormalizeAudioJob.cs` | Burst音声正規化ジョブ |
+| `Runtime/Core/Diagnostics/TTSDebugLog.cs` | パイプライン各段のデバッグログ制御 |
 | asmdefファイル（更新） | UniTask, ZString, Unity.Burst, Unity.Collections参照追加 |
 
 ### 実装仕様の要点
@@ -493,6 +498,9 @@ UniTask非同期パイプライン、BERTキャッシュ、Burstジョブ、ウ�
 | `AsyncPipelineTests.SynthesizeAsync_CancellationThrows` | Runtime | キャンセル動作 |
 | `AsyncPipelineTests.SynthesizeAsync_MultipleCallsSucceed` | Runtime | 複数回呼び出し |
 | `WarmupTests.Placeholder_WarmupTestsRequireModel` | Runtime | ウォームアップ（モデル要） |
+| `G2PDiagnosticTests` | Runtime | G2P出力の診断テスト |
+| `ToneAndLanguageConsistencyTests` | Editor | トーン・言語IDの整合性テスト |
+| `SymbolConsistencyTests` | Editor | シンボルテーブルの整合性テスト |
 
 ---
 
@@ -591,3 +599,6 @@ SBV2TTSManager (MonoBehaviour)
 | — | `eed7f3b` コンパイルエラー修正（asmdef参照 + using追加） | 完了 |
 | P1 | `67f207f` Add SynthesizeAsync to TTS pipeline | 完了 |
 | P1 | `67e9489` Add BasicTTS sample scene with UI layout | 完了 |
+| — | `c29e00b` Fix P/Invoke signatures, add SBV2 conversion script, and reorganize assets | 完了 |
+| — | `6e38c9b` Add inference tests and fix ONNX conversion for Sentis compatibility | 完了 |
+| — | `c06f32c` Add blank interleaving, diagnostics, and improve G2P/inference pipeline | 完了 |

@@ -9,7 +9,7 @@ uPiper・uCosyVoiceの実プロジェクト構造を参考に、Sentis 2.5.0向�
 
 ## 推奨ディレクトリレイアウト
 
-> **Note**: 本ドキュメントの推奨構成は、01/02/03で記載したシンプルな構成（`Assets/Scripts/G2P/...`, `Assets/Models/` 等）を、パッケージ化・再配布に対応できるよう発展させたものである。初期プロトタイプでは01/02の構成で開発し、安定後に以下の構成へ移行することを推奨する。
+> **Note**: 以下のディレクトリ構成は実装済みの最終構成である。パッケージ化・再配布に対応したレイアウト。
 
 ```
 Assets/
@@ -18,29 +18,43 @@ Assets/
       Core/
         Inference/
           BertRunner.cs              # DeBERTa推論ラッパー
+          CachedBertRunner.cs        # LRUキャッシュ付きBERT推論
           SBV2ModelRunner.cs         # メインTTSモデル推論
           ModelAssetManager.cs       # モデルロード・ライフサイクル管理
+          TTSWarmup.cs               # 起動時ウォームアップ推論
         TextProcessing/
           IG2P.cs                    # G2Pインターフェース
           JapaneseG2P.cs             # OpenJTalkベースG2P実装
           SBV2PhonemeMapper.cs       # OpenJTalk音素→SBV2トークンID
           SBV2Tokenizer.cs           # DeBERTa用文字レベルトークナイザ
           TextNormalizer.cs          # 全角→半角等のテキスト正規化
+          PhonemeUtils.cs            # 音素ユーティリティ
+          PhonemeCharacterAligner.cs # 音素・文字アライメント
+          BertAlignmentJob.cs        # Burstジョブ: BERTアライメント
+          BertAligner.cs             # BERT埋め込みアライメント
+          G2PResult.cs               # G2P結果構造体
         Audio/
           AudioClipGenerator.cs      # Tensor→AudioClip変換
           TTSAudioUtility.cs         # 音声正規化・ユーティリティ
+          NormalizeAudioJob.cs       # Burstジョブ: 音声正規化
         Configuration/
           TTSSettings.cs             # ScriptableObjectベース設定
           ModelConfiguration.cs      # モデルパス・バックエンド設定
         Services/
           TTSPipeline.cs             # 推論パイプラインオーケストレータ
           ITTSPipeline.cs            # パイプラインインターフェース
+          TTSPipelineBuilder.cs      # Builder パターンによる構築
+          TTSRequestQueue.cs         # リクエストキュー管理
         Native/
           OpenJTalkNative.cs         # OpenJTalk P/Invoke (uPiper流用)
           OpenJTalkConstants.cs      # 辞書パス定数 (uPiper流用)
+          OpenJTalkHandle.cs         # OpenJTalkハンドル管理
+        Diagnostics/
+          TTSDebugLog.cs             # デバッグログユーティリティ
         Data/
           StyleVectorProvider.cs     # style_vectors.npy 読み込み
           NpyReader.cs               # NumPy .npy パーサー
+          LRUCache.cs                # LRUキャッシュ汎用実装
       uStyleBertVITS2.Runtime.asmdef
     Editor/
       TTSSettingsEditor.cs           # カスタムInspector
@@ -106,7 +120,10 @@ Assets/
     "name": "uStyleBertVITS2.Runtime",
     "rootNamespace": "uStyleBertVITS2",
     "references": [
-        "Unity.InferenceEngine"
+        "Unity.InferenceEngine",
+        "UniTask",
+        "UniTask.Linq",
+        "Unity.Burst"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -119,7 +136,8 @@ Assets/
 
 - `allowUnsafeCode: true` — stackalloc、Span操作、ネイティブメモリアクセスに必要
 - `Unity.InferenceEngine` — Sentis 2.5.0の実際のアセンブリ名
-- Newtonsoft.Json が必要な場合は `"com.unity.nuget.newtonsoft-json"` を追加
+- `UniTask` / `UniTask.Linq` — 非同期パイプライン (Cysharp UniTask)
+- `Unity.Burst` — BertAlignmentJob, NormalizeAudioJob 等の Burst ジョブ
 
 #### 2. Editor (`uStyleBertVITS2.Editor.asmdef`)
 
@@ -147,8 +165,11 @@ Assets/
     "references": [
         "uStyleBertVITS2.Runtime",
         "Unity.InferenceEngine",
+        "Unity.Collections",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "UniTask",
+        "UniTask.Linq"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -186,11 +207,15 @@ Assets/
 uStyleBertVITS2.Tests.Editor
   └──→ uStyleBertVITS2.Editor
          └──→ uStyleBertVITS2.Runtime
-                └──→ Unity.InferenceEngine
+                ├──→ Unity.InferenceEngine
+                ├──→ UniTask / UniTask.Linq
+                └──→ Unity.Burst
 
 uStyleBertVITS2.Tests.Runtime
-  └──→ uStyleBertVITS2.Runtime
-         └──→ Unity.InferenceEngine
+  ├──→ uStyleBertVITS2.Runtime
+  ├──→ Unity.Collections
+  ├──→ UniTask / UniTask.Linq
+  └──→ Unity.InferenceEngine
 ```
 
 ---
@@ -204,17 +229,27 @@ TTSPipeline (Services/)
 ├── IG2P → JapaneseG2P (TextProcessing/)
 │     ├── OpenJTalkNative (Native/)
 │     ├── SBV2PhonemeMapper
+│     ├── PhonemeUtils
 │     └── TextNormalizer
+├── BertAligner (TextProcessing/)
+│     └── BertAlignmentJob (Burst)
 ├── SBV2Tokenizer (TextProcessing/)
-├── BertRunner (Inference/)
+├── CachedBertRunner (Inference/)
+│     └── BertRunner (Inference/)
 ├── SBV2ModelRunner (Inference/)
 ├── StyleVectorProvider (Data/)
+│     └── LRUCache (Data/)
 └── TTSSettings (Configuration/)
 ```
 
 ### インターフェース設計
 
 ```csharp
+using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
+using UnityEngine;
+
 namespace uStyleBertVITS2
 {
     /// <summary>
@@ -247,7 +282,7 @@ namespace uStyleBertVITS2
     public interface ITTSPipeline : IDisposable
     {
         AudioClip Synthesize(TTSRequest request);
-        Task<AudioClip> SynthesizeAsync(TTSRequest request);
+        UniTask<AudioClip> SynthesizeAsync(TTSRequest request, CancellationToken ct = default);
     }
 
     public readonly struct TTSRequest
@@ -259,6 +294,7 @@ namespace uStyleBertVITS2
         public readonly float NoiseScale;
         public readonly float NoiseScaleW;
         public readonly float LengthScale;
+        public readonly float StyleWeight;
 
         public TTSRequest(
             string text,
@@ -267,7 +303,8 @@ namespace uStyleBertVITS2
             float sdpRatio = 0.2f,
             float noiseScale = 0.6f,
             float noiseScaleW = 0.8f,
-            float lengthScale = 1.0f)
+            float lengthScale = 1.0f,
+            float styleWeight = 1.0f)
         {
             Text = text;
             SpeakerId = speakerId;
@@ -276,6 +313,7 @@ namespace uStyleBertVITS2
             NoiseScale = noiseScale;
             NoiseScaleW = noiseScaleW;
             LengthScale = lengthScale;
+            StyleWeight = styleWeight;
         }
     }
 }
@@ -325,7 +363,7 @@ namespace uStyleBertVITS2
 using UnityEngine;
 using Unity.InferenceEngine;
 
-namespace uStyleBertVITS2
+namespace uStyleBertVITS2.Configuration
 {
     [CreateAssetMenu(fileName = "TTSSettings", menuName = "uStyleBertVITS2/TTS Settings")]
     public class TTSSettings : ScriptableObject
@@ -335,8 +373,11 @@ namespace uStyleBertVITS2
         public ModelAsset TTSModel;
 
         [Header("Backend")]
-        public BackendType PreferredBackend = BackendType.GPUCompute;
-        public BackendType FallbackBackend = BackendType.CPU;
+        [Tooltip("BERT推論バックエンド (DeBERTaが大きいためCPU推奨)")]
+        public BackendType BertBackend = BackendType.CPU;
+
+        [Tooltip("TTS推論バックエンド (GPUCompute推奨)")]
+        public BackendType TTSBackend = BackendType.GPUCompute;
 
         [Header("Default Parameters")]
         [Range(0f, 1f)] public float DefaultSdpRatio = 0.2f;
@@ -353,6 +394,10 @@ namespace uStyleBertVITS2
         public bool EnableWarmup = true;
         public bool EnableBertCache = true;
         [Range(16, 256)] public int BertCacheCapacity = 64;
+
+        [Header("Audio")]
+        public int SampleRate = 44100;
+        [Range(0.1f, 1.0f)] public float NormalizationPeak = 0.95f;
     }
 }
 ```
@@ -528,14 +573,19 @@ public class TTSPipelineBuilder
             Path.Combine(Application.streamingAssetsPath, _settings.DictionaryPath));
         _tokenizer ??= new SBV2Tokenizer(
             Path.Combine(Application.streamingAssetsPath, _settings.VocabPath));
-        _bertRunner ??= new BertRunner(_settings.BertModel, _settings.PreferredBackend);
-        _ttsRunner ??= new SBV2ModelRunner(_settings.TTSModel, _settings.PreferredBackend);
-        _styleProvider ??= new StyleVectorProvider();
+        _bertRunner ??= new BertRunner(_settings.BertModel, _settings.BertBackend);
+        _ttsRunner ??= new SBV2ModelRunner(_settings.TTSModel, _settings.TTSBackend);
 
-        _styleProvider.Load(
-            Path.Combine(Application.streamingAssetsPath, _settings.StyleVectorPath));
+        if (_styleProvider == null)
+        {
+            _styleProvider = new StyleVectorProvider();
+            _styleProvider.Load(
+                Path.Combine(Application.streamingAssetsPath, _settings.StyleVectorPath));
+        }
 
-        return new TTSPipeline(_g2p, _tokenizer, _bertRunner, _ttsRunner, _styleProvider);
+        return new TTSPipeline(
+            _g2p, _tokenizer, _bertRunner, _ttsRunner, _styleProvider,
+            _settings.SampleRate, _settings.NormalizationPeak);
     }
 }
 ```

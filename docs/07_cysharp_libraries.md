@@ -4,6 +4,18 @@
 
 Style-Bert-VITS2 Unity実装の推論パイプラインにおけるGC圧力削減・非同期制御・文字列処理・ネイティブメモリ管理の最適化課題に対し、Cysharp（neuecc氏）のOSSライブラリ群を活用する方針をまとめる。
 
+### 導入状況
+
+| ライブラリ | 状況 | 用途 |
+|---|---|---|
+| **UniTask** | **導入済み** | 非同期パイプライン (SynthesizeAsync, TTSRequestQueue) |
+| **ZString** | **導入済み** | ゼロアロケーション文字列処理 |
+| NativeMemoryArray | 未導入 | ネイティブメモリバッファ |
+| ZLinq | 未導入 | ゼロアロケーションLINQ |
+| csbindgen | 未導入 | P/Invoke自動生成 |
+| MemoryPack | 未導入 | 高速バイナリシリアライザ |
+| R3 | 未導入 | Reactive Extensions |
+
 本ドキュメントは `docs/05_performance_optimization.md`（パフォーマンス最適化）と `docs/06_csharp_optimization.md`（C#高速化）の手法を前提とし、Cysharpライブラリによる改善・置き換えを提案する。
 
 ---

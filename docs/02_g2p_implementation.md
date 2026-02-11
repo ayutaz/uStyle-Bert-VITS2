@@ -61,7 +61,7 @@ OpenJTalkNative (static class)
 
 ### 1. SBV2PhonemeMapper — 音素→SBV2トークンID変換
 
-sbv2-apiの `crates/sbv2_core/src/norm.rs` から確認した音素インベントリ（127シンボル）:
+SBV2モデルの全言語統合シンボルリスト（112シンボル, n_vocab=112）:
 
 ```
 日本語音素(42): "N", "a", "a:", "b", "by", "ch", "d", "dy", "e", "f",
@@ -73,7 +73,7 @@ sbv2-apiの `crates/sbv2_core/src/norm.rs` から確認した音素インベン�
 ```
 
 **実装方針**:
-- SBV2モデルの `config.json` に含まれる `symbols` リストから音素→ID辞書を動的構築
+- ハードコードされた DefaultSymbols テーブル（112要素）から音素→ID辞書を構築。config.json は不要。
 - OpenJTalkの出力音素をSBV2シンボル名にマッピング
 - Piperと異なりPUA変換は不要（SBV2はOpenJTalk音素をほぼそのまま使用）
 
@@ -132,6 +132,15 @@ word2ph =     [1,  2,  1,  2,  1,  2,  0 ]
 展開後 =      [b0, b1, b1, b2, b3, b3, b4, b5, b5]
 ```
 
+### 5. PhonemeCharacterAligner — word2ph の計算
+
+`PhonemeCharacterAligner.ComputeWord2Ph(text, phoneSeqLen)` で word2ph を計算する。
+
+- 仮名文字ごとの音素数テーブル（ひらがな/カタカナ対応）を内蔵
+- [CLS] → 先頭SP(1音素)、[SEP] → 末尾SP(1音素)
+- 漢字等の未知文字は残りの音素数を比例配分
+- 推定合計が phoneSeqLen と一致しない場合は最後の文字で補正
+
 ---
 
 ## DeBERTaトークナイザ (SBV2Tokenizer)
@@ -175,6 +184,14 @@ word2ph =     [1,  2,  1,  2,  1,  2,  0 ]
   │      │                    ├── tones[]        (int32)
   │      │                    ├── language_ids[]  (int32)
   │      │                    └── word2ph[]       (int[])
+  │      │                    │
+  │      │                    └──→ [PhonemeUtils.Intersperse]
+  │      │                           │  add_blank: 各音素間に blank(0) を挿入
+  │      │                           │  [a, b, c] → [0, a, 0, b, 0, c, 0]
+  │      │                           │
+  │      │                           ├── phoneme_ids[]  (int32, 2N+1)
+  │      │                           ├── tones[]        (int32, 2N+1)
+  │      │                           └── language_ids[]  (int32, 2N+1)
   │      │
   │      └──→ [SBV2Tokenizer] DeBERTa用文字レベルトークナイズ
   │             │
@@ -187,7 +204,7 @@ word2ph =     [1,  2,  1,  2,  1,  2,  0 ]
   │
   ├──→ [word2phアライメント]
   │      │
-  │      └── ja_bert [1, 1024, seq_len]  ← BERTを音素列に展開
+  │      └── bert [1, 1024, seq_len]  ← JP-Extraモデルの入力名
   │
   └──→ [SBV2ModelRunner] メインTTS推論
          │
@@ -199,19 +216,16 @@ word2ph =     [1,  2,  1,  2,  1,  2,  0 ]
 ## ファイル配置
 
 ```
-Assets/
-  Scripts/
-    G2P/
-      Native/
-        OpenJTalkNative.cs          (uPiper流用, namespace変更)
-      Text/
-        TextNormalizer.cs           (uPiper流用, namespace変更)
+Assets/uStyleBertVITS2/
+  Runtime/Core/
+    Native/
+      OpenJTalkNative.cs            (uPiper流用, namespace変更)
       OpenJTalkConstants.cs         (uPiper流用, namespace変更)
-      CustomDictionary.cs           (uPiper流用, namespace変更)
-      SBV2PhonemeMapper.cs          (新規: OpenJTalk音素→SBV2トークンID)
-      SBV2TextProcessor.cs          (新規: パイプライン統合)
-    Tokenizer/
-      SBV2Tokenizer.cs              (新規: DeBERTa用文字レベルトークナイザ)
+    TextProcessing/
+      TextNormalizer.cs             (uPiper流用, namespace変更)
+      SBV2PhonemeMapper.cs          (OpenJTalk音素→SBV2トークンID)
+      JapaneseG2P.cs                (パイプライン統合)
+      SBV2Tokenizer.cs              (DeBERTa用文字レベルトークナイザ)
   Plugins/
     Windows/x86_64/
       openjtalk_wrapper.dll         (uPiperからコピー)

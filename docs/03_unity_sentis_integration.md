@@ -45,6 +45,8 @@ float[] data = output.DownloadToArray();
 | `BackendType.GPUCompute` | 速度優先（推奨） | DirectML使用。精度問題が出る場合あり |
 | `BackendType.CPU` | 安定性優先 | Burstコンパイラ使用。uCosyVoiceでは一部CPU推奨 |
 
+> **警告**: DeBERTa FP32 を `BackendType.GPUCompute` で実行すると D3D12 デバイスロストが発生する。BERT推論は `BackendType.CPU` を使用すること。
+
 ---
 
 ## モデル間データチェーン (uCosyVoiceパターン)
@@ -185,39 +187,87 @@ SBV2の出力は 44100Hz mono。uCosyVoiceは 24000Hz なので注意。
 ```csharp
 public class BertRunner : IDisposable
 {
+    private const int HiddenSize = 1024;
     private Worker _worker;
+    private readonly int _padLen;
+    private bool _disposed;
 
     public BertRunner(ModelAsset modelAsset, BackendType backendType)
     {
         var model = ModelLoader.Load(modelAsset);
+        _padLen = GetSeqLenFromModel(model);
         _worker = new Worker(model, backendType);
     }
 
-    /// <summary>
-    /// DeBERTa推論: テキストトークン → BERT埋め込み
-    /// </summary>
-    /// <param name="tokenIds">トークンID配列 [CLS] ... [SEP]</param>
-    /// <param name="attentionMask">アテンションマスク (全1)</param>
-    /// <returns>BERT埋め込み [1, 1024, token_len]</returns>
+    public int PadLen => _padLen;
+
     public float[] Run(int[] tokenIds, int[] attentionMask)
     {
         int tokenLen = tokenIds.Length;
+        // パディング: padLen に合わせる
+        int[] paddedIds = new int[_padLen];
+        int[] paddedMask = new int[_padLen];
+        Array.Copy(tokenIds, paddedIds, tokenLen);
+        Array.Copy(attentionMask, paddedMask, tokenLen);
 
-        using var inputIds = new Tensor<int>(new TensorShape(1, tokenLen), tokenIds);
-        using var tokenTypes = new Tensor<int>(new TensorShape(1, tokenLen), new int[tokenLen]); // 全0
-        using var mask = new Tensor<int>(new TensorShape(1, tokenLen), attentionMask);
+        using var inputIds = new Tensor<int>(new TensorShape(1, _padLen), paddedIds);
+        using var mask = new Tensor<int>(new TensorShape(1, _padLen), paddedMask);
+        // token_type_ids は不要（onnxsim で定数化済み）
 
         _worker.SetInput("input_ids", inputIds);
-        _worker.SetInput("token_type_ids", tokenTypes);
         _worker.SetInput("attention_mask", mask);
         _worker.Schedule();
 
         var output = _worker.PeekOutput() as Tensor<float>;
         output.ReadbackAndClone();
-        return output.DownloadToArray();  // [1, 1024, token_len] flattened
+        float[] fullOutput = output.DownloadToArray(); // [1, 1024, padLen]
+
+        // 出力トリム: 実際のトークン長分だけ返す
+        if (tokenLen == _padLen) return fullOutput;
+        float[] trimmed = new float[HiddenSize * tokenLen];
+        for (int h = 0; h < HiddenSize; h++)
+            Array.Copy(fullOutput, h * _padLen, trimmed, h * tokenLen, tokenLen);
+        return trimmed;
+    }
+
+    private static int GetSeqLenFromModel(Model model)
+    {
+        foreach (var input in model.inputs)
+            if (input.name == "input_ids" && input.shape.rank >= 2)
+                return input.shape.Get(1);
+        return 50; // fallback
     }
 
     public void Dispose() { _worker?.Dispose(); }
+}
+```
+
+### CachedBertRunner
+
+同一テキストのBERT推論結果をLRUキャッシュで再利用する。DeBERTa推論がボトルネックのため最も効果的な最適化。
+
+```csharp
+public class CachedBertRunner : IDisposable
+{
+    private readonly BertRunner _runner;
+    private readonly LRUCache<string, float[]> _cache;
+
+    public CachedBertRunner(BertRunner runner, int capacity = 64)
+    {
+        _runner = runner;
+        _cache = new LRUCache<string, float[]>(capacity);
+    }
+
+    public float[] Run(string text, int[] tokenIds, int[] mask)
+    {
+        if (_cache.TryGet(text, out var cached))
+            return cached;
+        float[] result = _runner.Run(tokenIds, mask);
+        _cache.Put(text, result);
+        return result;
+    }
+
+    public void Dispose() => _runner?.Dispose();
 }
 ```
 
@@ -227,12 +277,20 @@ public class BertRunner : IDisposable
 public class SBV2ModelRunner : IDisposable
 {
     private Worker _worker;
+    private readonly bool _isJPExtra;
+    private readonly int _padLen;
 
     public SBV2ModelRunner(ModelAsset modelAsset, BackendType backendType)
     {
         var model = ModelLoader.Load(modelAsset);
+        // JP-Extra自動検出: ja_bert入力がなければJP-Extraモデル
+        _isJPExtra = !model.inputs.Exists(i => i.name == "ja_bert");
+        _padLen = GetSeqLenFromModel(model);
         _worker = new Worker(model, backendType);
     }
+
+    public bool IsJPExtra => _isJPExtra;
+    public int PadLen => _padLen;
 
     /// <summary>
     /// メインTTS推論
@@ -244,12 +302,21 @@ public class SBV2ModelRunner : IDisposable
     {
         int seqLen = phonemeIds.Length;
 
-        using var xTst = new Tensor<int>(new TensorShape(1, seqLen), phonemeIds);
+        // パディング: padLen に合わせる
+        int[] PadInt(int[] src) { var dst = new int[_padLen]; Array.Copy(src, dst, seqLen); return dst; }
+        float[] PadBert(float[] src)
+        {
+            var dst = new float[1024 * _padLen];
+            for (int h = 0; h < 1024; h++)
+                Array.Copy(src, h * seqLen, dst, h * _padLen, seqLen);
+            return dst;
+        }
+
+        using var xTst = new Tensor<int>(new TensorShape(1, _padLen), PadInt(phonemeIds));
         using var xTstLengths = new Tensor<int>(new TensorShape(1), new int[] { seqLen });
-        using var tonesTensor = new Tensor<int>(new TensorShape(1, seqLen), tones);
-        using var langTensor = new Tensor<int>(new TensorShape(1, seqLen), languageIds);
+        using var tonesTensor = new Tensor<int>(new TensorShape(1, _padLen), PadInt(tones));
+        using var langTensor = new Tensor<int>(new TensorShape(1, _padLen), PadInt(languageIds));
         using var sidTensor = new Tensor<int>(new TensorShape(1), new int[] { speakerId });
-        using var bertTensor = new Tensor<float>(new TensorShape(1, 1024, seqLen), bertEmbedding);
         using var styleTensor = new Tensor<float>(new TensorShape(1, 256), styleVector);
         using var sdpTensor = new Tensor<float>(new TensorShape(1), new float[] { sdpRatio });
         using var noiseTensor = new Tensor<float>(new TensorShape(1), new float[] { noiseScale });
@@ -260,7 +327,6 @@ public class SBV2ModelRunner : IDisposable
         _worker.SetInput("x_tst_lengths", xTstLengths);
         _worker.SetInput("tones", tonesTensor);
         _worker.SetInput("language", langTensor);
-        _worker.SetInput("bert", bertTensor);
         _worker.SetInput("style_vec", styleTensor);
         _worker.SetInput("sid", sidTensor);
         _worker.SetInput("sdp_ratio", sdpTensor);
@@ -268,11 +334,36 @@ public class SBV2ModelRunner : IDisposable
         _worker.SetInput("noise_scale_w", noiseWTensor);
         _worker.SetInput("length_scale", lengthTensor);
 
+        // JP-Extra: bert のみ（ja_bert/en_bert なし）
+        // 通常モデル: ja_bert, bert, en_bert を個別入力
+        if (_isJPExtra)
+        {
+            using var bertTensor = new Tensor<float>(new TensorShape(1, 1024, _padLen), PadBert(bertEmbedding));
+            _worker.SetInput("bert", bertTensor);
+        }
+        else
+        {
+            using var jaBertTensor = new Tensor<float>(new TensorShape(1, 1024, _padLen), PadBert(bertEmbedding));
+            using var bertTensor = new Tensor<float>(new TensorShape(1, 1024, _padLen), new float[1024 * _padLen]);
+            using var enBertTensor = new Tensor<float>(new TensorShape(1, 1024, _padLen), new float[1024 * _padLen]);
+            _worker.SetInput("ja_bert", jaBertTensor);
+            _worker.SetInput("bert", bertTensor);
+            _worker.SetInput("en_bert", enBertTensor);
+        }
+
         _worker.Schedule();
 
         var output = _worker.PeekOutput("output") as Tensor<float>;
         output.ReadbackAndClone();
         return output.DownloadToArray();  // [1, 1, audio_samples] flattened
+    }
+
+    private static int GetSeqLenFromModel(Model model)
+    {
+        foreach (var input in model.inputs)
+            if (input.name == "x_tst" && input.shape.rank >= 2)
+                return input.shape.Get(1);
+        return 200; // fallback
     }
 
     public void Dispose() { _worker?.Dispose(); }
@@ -329,7 +420,7 @@ public class SBV2TTSManager : MonoBehaviour, IDisposable
     [SerializeField] private ModelAsset _ttsModelAsset;
 
     [Header("Settings")]
-    [SerializeField] private BackendType _backendType = BackendType.GPUCompute;
+    [SerializeField] private TTSSettings _settings;
 
     private SBV2TextProcessor _textProcessor;
     private SBV2Tokenizer _tokenizer;
@@ -341,8 +432,8 @@ public class SBV2TTSManager : MonoBehaviour, IDisposable
     {
         _textProcessor = new SBV2TextProcessor(/* dictPath, configPath */);
         _tokenizer = new SBV2Tokenizer(/* vocabPath */);
-        _bertRunner = new BertRunner(_bertModelAsset, _backendType);
-        _ttsRunner = new SBV2ModelRunner(_ttsModelAsset, _backendType);
+        _bertRunner = new BertRunner(_bertModelAsset, _settings.BertBackend);
+        _ttsRunner = new SBV2ModelRunner(_ttsModelAsset, _settings.TTSBackend);
         _styleProvider = new StyleVectorProvider();
         _styleProvider.Load(/* npyPath */);
     }
@@ -361,6 +452,12 @@ public class SBV2TTSManager : MonoBehaviour, IDisposable
     {
         // 1. G2P: テキスト→音素ID+トーン+言語ID+word2ph
         var (phoneIds, tones, langIds, word2ph) = _textProcessor.Process(text);
+
+        // 1.5 add_blank (学習時と同じ前処理)
+        phoneIds = PhonemeUtils.Intersperse(phoneIds, 0);
+        tones = PhonemeUtils.Intersperse(tones, 0);
+        langIds = PhonemeUtils.Intersperse(langIds, 0);
+        word2ph = PhonemeUtils.AdjustWord2PhForBlanks(word2ph);
 
         // 2. DeBERTaトークナイズ + BERT推論
         var (tokenIds, attentionMask) = _tokenizer.Encode(text);
@@ -482,11 +579,11 @@ SampleScene
 
 ## 検証チェックリスト
 
-1. [ ] Sentisパッケージインストール確認 (`com.unity.ai.inference` 2.5.0)
-2. [ ] ONNXインポート: エラーなしでModelAssetに変換されるか
-3. [ ] BertRunner単体: テキスト→BERT埋め込みのshapeが [1, 1024, token_len] か
-4. [ ] SBV2ModelRunner単体: ダミー入力→音声波形が出力されるか
-5. [ ] G2P単体: 「こんにちは」→正しい音素ID配列か
-6. [ ] word2phアライメント: BERT出力と音素列の長さが一致するか
-7. [ ] エンドツーエンド: テキスト入力→音声再生
-8. [ ] GPU/CPUフォールバック: GPUCompute失敗時にCPUで動作するか
+1. [x] Sentisパッケージインストール確認 (`com.unity.ai.inference` 2.5.0)
+2. [x] ONNXインポート: エラーなしでModelAssetに変換されるか
+3. [x] BertRunner単体: テキスト→BERT埋め込みのshapeが [1, 1024, token_len] か
+4. [x] SBV2ModelRunner単体: ダミー入力→音声波形が出力されるか
+5. [x] G2P単体: 「こんにちは」→正しい音素ID配列か
+6. [x] word2phアライメント: BERT出力と音素列の長さが一致するか
+7. [x] エンドツーエンド: テキスト入力→音声再生
+8. [x] GPU/CPUフォールバック: GPUCompute失敗時にCPUで動作するか

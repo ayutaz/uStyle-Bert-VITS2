@@ -91,6 +91,16 @@ public Worker CreateWorkerWithFallback(Model model, BackendType preferred, Backe
 
 → ウォームアップ推論で事前にシェーダコンパイルを完了させることが重要（後述）。
 
+### 実測値 (Windows デスクトップ)
+
+| 構成 | 合計レイテンシ | 備考 |
+|---|---|---|
+| BERT=CPU + TTS=CPU | ~753ms | 安定、CPU負荷高 |
+| BERT=CPU + TTS=GPU (初回) | ~969ms | シェーダコンパイル含む |
+| BERT=CPU + TTS=GPU (2回目以降) | ~621ms | ウォームアップ後 |
+
+> **警告**: DeBERTa FP32 を `BackendType.GPUCompute` で実行すると D3D12 デバイスロストが発生する。BERT推論には必ず `BackendType.CPU` を使用すること。
+
 ---
 
 ## フレーム分散推論 (ScheduleIterable)
@@ -186,6 +196,8 @@ public IEnumerator SynthesizeCoroutine(TTSRequest request)
 ```
 
 ### async/awaitパターン (Unity 6 Awaitable)
+
+> **Note**: 本プロジェクトでは UniTask ベースの非同期処理を採用している（Unity 6 の `Awaitable` ではなく）。以下のサンプルコードは参考実装としての Awaitable 版。実際のコードは `UniTask<AudioClip> SynthesizeAsync(TTSRequest, CancellationToken)` を使用。
 
 > **Schedule() vs ScheduleIterable() の違い**:
 > - `Schedule()`: 全オペレーションを即座に実行（同期的）。低レイテンシだがフレームをブロックする
@@ -297,8 +309,8 @@ private async Awaitable PreloadModels()
 
     await Awaitable.MainThreadAsync();
 
-    _bertWorker = new Worker(bertModel, _settings.PreferredBackend);
-    _ttsWorker = new Worker(ttsModel, _settings.PreferredBackend);
+    _bertWorker = new Worker(bertModel, _settings.BertBackend);
+    _ttsWorker = new Worker(ttsModel, _settings.TTSBackend);
 }
 ```
 
@@ -531,8 +543,8 @@ public class TTSManager : MonoBehaviour
     private IEnumerator Start()
     {
         // モデルロード
-        _bert = new BertRunner(_settings.BertModel, _settings.PreferredBackend);
-        _tts = new SBV2ModelRunner(_settings.TTSModel, _settings.PreferredBackend);
+        _bert = new BertRunner(_settings.BertModel, _settings.BertBackend);
+        _tts = new SBV2ModelRunner(_settings.TTSModel, _settings.TTSBackend);
 
         // ウォームアップ
         if (_settings.EnableWarmup)

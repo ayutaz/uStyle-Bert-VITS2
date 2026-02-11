@@ -40,5 +40,19 @@ namespace uStyleBertVITS2.Tests.Editor
         {
             Assert.AreEqual("hello", TextNormalizer.Normalize("  hello  "));
         }
+
+        [Test]
+        public void FullWidthSpaces_CollapsedToOne()
+        {
+            Assert.AreEqual("\u3042 \u3044",
+                TextNormalizer.Normalize("\u3042\u3000\u3000\u3044"));
+        }
+
+        [Test]
+        public void MixedSpaces_CollapsedToOne()
+        {
+            Assert.AreEqual("\u3042 \u3044",
+                TextNormalizer.Normalize("\u3042\u3000 \u3044"));
+        }
     }
 }

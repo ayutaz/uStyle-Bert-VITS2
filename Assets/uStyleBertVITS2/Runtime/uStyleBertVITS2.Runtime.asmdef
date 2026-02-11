@@ -5,7 +5,9 @@
         "Unity.InferenceEngine",
         "UniTask",
         "UniTask.Linq",
-        "Unity.Burst"
+        "Unity.Burst",
+        "Unity.Collections",
+        "Unity.Jobs"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

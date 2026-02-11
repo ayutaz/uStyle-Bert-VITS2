@@ -1,4 +1,7 @@
 using System;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
 
 namespace uStyleBertVITS2.TextProcessing
 {
@@ -55,6 +58,79 @@ namespace uStyleBertVITS2.TextProcessing
             }
 
             return aligned;
+        }
+
+        /// <summary>
+        /// Burst ジョブを使用して BERT 埋め込みを音素列長に展開する。
+        /// </summary>
+        public static float[] AlignBertToPhonemesBurst(
+            float[] bertFlat, int tokenLen, int[] word2ph, int phoneSeqLen)
+        {
+            float[] aligned = new float[EmbeddingDimension * phoneSeqLen];
+            AlignBertToPhonemesBurst(bertFlat, tokenLen, word2ph, phoneSeqLen, aligned);
+            return aligned;
+        }
+
+        /// <summary>
+        /// Burst ジョブを使用して BERT 埋め込みを事前確保済みバッファに展開する。
+        /// </summary>
+        public static void AlignBertToPhonemesBurst(
+            float[] bertFlat, int tokenLen, int[] word2ph, int phoneSeqLen, float[] dest)
+        {
+            if (bertFlat == null) throw new ArgumentNullException(nameof(bertFlat));
+            if (word2ph == null) throw new ArgumentNullException(nameof(word2ph));
+            if (dest == null) throw new ArgumentNullException(nameof(dest));
+
+            // word2ph合計の検証
+            int sum = 0;
+            for (int w = 0; w < word2ph.Length; w++)
+                sum += word2ph[w];
+
+            if (sum != phoneSeqLen)
+                throw new ArgumentException(
+                    $"word2ph sum ({sum}) does not match phoneSeqLen ({phoneSeqLen}).");
+
+            // phoneToToken マッピング構築
+            var phoneToToken = new NativeArray<int>(phoneSeqLen, Allocator.TempJob);
+            int phoneIdx = 0;
+            for (int w = 0; w < word2ph.Length; w++)
+            {
+                for (int p = 0; p < word2ph[w]; p++)
+                {
+                    phoneToToken[phoneIdx++] = w;
+                }
+            }
+
+            var bertNative = new NativeArray<float>(bertFlat, Allocator.TempJob);
+            var alignedNative = new NativeArray<float>(EmbeddingDimension * phoneSeqLen, Allocator.TempJob);
+
+            var job = new BertAlignmentJob
+            {
+                BertFlat = bertNative,
+                PhoneToToken = phoneToToken,
+                AlignedBert = alignedNative,
+                TokenLen = tokenLen,
+                PhoneSeqLen = phoneSeqLen,
+                EmbDim = EmbeddingDimension
+            };
+
+            job.Schedule(phoneSeqLen, 64).Complete();
+
+            // NativeArray.CopyTo requires exact length match, but dest may be larger (ArrayPool).
+            // Use unsafe copy to avoid the length check.
+            int copyLen = EmbeddingDimension * phoneSeqLen;
+            unsafe
+            {
+                fixed (float* destPtr = dest)
+                {
+                    Unity.Collections.LowLevel.Unsafe.UnsafeUtility.MemCpy(
+                        destPtr, alignedNative.GetUnsafeReadOnlyPtr(), copyLen * sizeof(float));
+                }
+            }
+
+            alignedNative.Dispose();
+            bertNative.Dispose();
+            phoneToToken.Dispose();
         }
     }
 }

@@ -159,6 +159,8 @@ Phase 0: プロジェクト基盤 [Done]
 | `StyleVectorTests.LoadAndGetVector` | Runtime | ロードとベクトル取得 |
 | `StyleVectorTests.NeutralVectorIsIndex0` | Runtime | インデックス0がニュートラル |
 | `StyleVectorTests.WeightedInterpolation` | Runtime | 重み付き補間の正確性 |
+| `StyleVectorTests.GetVector_DestOverload_MatchesAlloc` | Runtime | destバッファ版の等価性 |
+| `StyleVectorTests.GetVector_DestOverload_ThrowsOnSmallBuffer` | Runtime | 小バッファでの例外 |
 | `ConfigurationTests.TTSSettingsDefaults` | Editor | デフォルト値の確認 |
 | `ConfigurationTests.TTSSettingsSerializes` | Editor | シリアライズの確認 |
 
@@ -253,6 +255,20 @@ DeBERTa用の文字レベルトークナイザを実装する。モデル推論�
 - [x] language_idsが全て1
 
 ### テスト項目
+
+**TextNormalizerTests** (Editor):
+
+| テスト名 | 種別 | 内容 |
+|---|---|---|
+| `TextNormalizerTests.FullWidthAlphanumeric_ConvertedToHalfWidth` | Editor | 全角英数字→半角 |
+| `TextNormalizerTests.FullWidthSpace_ConvertedToHalfWidth` | Editor | 全角スペース→半角 |
+| `TextNormalizerTests.MultipleSpaces_CollapsedToOne` | Editor | 連続スペース圧縮 |
+| `TextNormalizerTests.NullAndEmpty_ReturnEmpty` | Editor | null/空文字列 |
+| `TextNormalizerTests.LeadingTrailingSpaces_Trimmed` | Editor | 先頭末尾スペース除去 |
+| `TextNormalizerTests.FullWidthSpaces_CollapsedToOne` | Editor | 連続全角スペース圧縮 |
+| `TextNormalizerTests.MixedSpaces_CollapsedToOne` | Editor | 全角+半角混在スペース圧縮 |
+
+**G2P / PhonemeMapper** (Runtime):
 
 | テスト名 | 種別 | 内容 |
 |---|---|---|
@@ -381,6 +397,8 @@ word2ph: 各トークンに対応する音素数
 | `BertAlignerTests.AlignMatchesPhoneSeqLen` | Runtime | 出力長の一致 |
 | `BertAlignerTests.Word2PhSumConsistency` | Runtime | word2ph合計の整合性 |
 | `BertAlignerTests.SingleTokenExpansion` | Runtime | 単一トークンの展開 |
+| `BertAlignerTests.BurstVersion_MatchesCPU` | Runtime | Burst版とCPU版の結果一致 |
+| `BertAlignerTests.BurstVersion_DestOverload_WorksWithLargerBuffer` | Runtime | 大きいdestバッファでの動作 |
 | `BertAlignerTests.ThrowsOnMismatchedSum` | Runtime | 不一致時の例外 |
 | `PipelineTests.Placeholder_PipelineTestsRequireFullSetup` | Runtime | E2Eテストのプレースホルダー |
 
@@ -430,6 +448,8 @@ float32 PCM → AudioClip変換を実装し、初めて人間が聴ける音声�
 | `AudioTests.ClipSampleRateCorrect` | Runtime | サンプルレートの正確性 |
 | `AudioTests.NormalizationPreventClipping` | Runtime | 正規化によるクリッピング防止 |
 | `AudioTests.EmptySamplesHandled` | Runtime | 空サンプルの処理 |
+| `AudioTests.NormalizeSamplesBurst_MatchesScalar` | Runtime | Burst版とスカラー版の結果一致 |
+| `AudioTests.NormalizeSamplesBurst_EmptyAndNull_NoThrow` | Runtime | null/空配列で例外なし |
 | `AudioTests.LargeSamplesHandled` | Runtime | 大量サンプルの処理 |
 
 ---

@@ -1,3 +1,5 @@
+using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 
 namespace uStyleBertVITS2.Audio
@@ -55,6 +57,46 @@ namespace uStyleBertVITS2.Audio
             float scale = targetPeak / maxAbs;
             for (int i = 0; i < samples.Length; i++)
                 samples[i] *= scale;
+        }
+
+        /// <summary>
+        /// Burst ジョブを使用して音声サンプルをピーク正規化する。
+        /// 短いバッファ (4096 samples 未満) はスカラーフォールバック。
+        /// </summary>
+        public static void NormalizeSamplesBurst(float[] samples, float targetPeak = 0.95f)
+        {
+            if (samples == null || samples.Length == 0) return;
+
+            // Pass 1: max 探索 (スカラー)
+            float maxAbs = 0f;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                float abs = samples[i] < 0f ? -samples[i] : samples[i];
+                if (abs > maxAbs) maxAbs = abs;
+            }
+
+            if (maxAbs <= 0f) return;
+
+            float scale = targetPeak / maxAbs;
+
+            // 短いバッファはスカラーフォールバック
+            if (samples.Length < 4096)
+            {
+                for (int i = 0; i < samples.Length; i++)
+                    samples[i] *= scale;
+                return;
+            }
+
+            // Pass 2: スケーリング (Burst 並列)
+            var native = new NativeArray<float>(samples, Allocator.TempJob);
+            var job = new NormalizeAudioJob
+            {
+                Samples = native,
+                Scale = scale
+            };
+            job.Schedule(samples.Length, 1024).Complete();
+            native.CopyTo(samples);
+            native.Dispose();
         }
 
         /// <summary>

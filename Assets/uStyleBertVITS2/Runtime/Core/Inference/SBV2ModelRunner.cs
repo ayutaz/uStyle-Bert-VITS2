@@ -19,6 +19,12 @@ namespace uStyleBertVITS2.Inference
         private Worker _worker;
         private readonly bool _isJPExtra;
         private readonly int _padLen;
+        private readonly int[] _paddedPhonemes;
+        private readonly int[] _paddedTones;
+        private readonly int[] _paddedLangs;
+        private readonly float[] _paddedJaBert;
+        private readonly float[] _zeroBertBuffer;   // 非JP-Extra用
+        private readonly float[] _zeroEnBertBuffer;  // 非JP-Extra用
         private bool _disposed;
 
         public SBV2ModelRunner(ModelAsset modelAsset, BackendType backendType)
@@ -26,6 +32,15 @@ namespace uStyleBertVITS2.Inference
             var model = ModelLoader.Load(modelAsset);
             _isJPExtra = !model.inputs.Exists(i => i.name == "ja_bert");
             _padLen = GetSeqLenFromModel(model);
+            _paddedPhonemes = new int[_padLen];
+            _paddedTones = new int[_padLen];
+            _paddedLangs = new int[_padLen];
+            _paddedJaBert = new float[HiddenSize * _padLen];
+            if (!_isJPExtra)
+            {
+                _zeroBertBuffer = new float[HiddenSize * _padLen];
+                _zeroEnBertBuffer = new float[HiddenSize * _padLen];
+            }
             _worker = new Worker(model, backendType);
         }
 
@@ -33,6 +48,15 @@ namespace uStyleBertVITS2.Inference
         {
             _isJPExtra = !model.inputs.Exists(i => i.name == "ja_bert");
             _padLen = GetSeqLenFromModel(model);
+            _paddedPhonemes = new int[_padLen];
+            _paddedTones = new int[_padLen];
+            _paddedLangs = new int[_padLen];
+            _paddedJaBert = new float[HiddenSize * _padLen];
+            if (!_isJPExtra)
+            {
+                _zeroBertBuffer = new float[HiddenSize * _padLen];
+                _zeroEnBertBuffer = new float[HiddenSize * _padLen];
+            }
             _worker = new Worker(model, backendType);
         }
 
@@ -75,27 +99,27 @@ namespace uStyleBertVITS2.Inference
                     $"Phoneme sequence length {seqLen} exceeds model capacity {_padLen}. " +
                     "Re-export the ONNX model with a larger seq_len.");
 
-            // 入力配列を padLen にパディング
-            int[] paddedPhonemes = new int[_padLen];
-            int[] paddedTones = new int[_padLen];
-            int[] paddedLangs = new int[_padLen];
-            Array.Copy(phonemeIds, paddedPhonemes, seqLen);
-            Array.Copy(tones, paddedTones, seqLen);
-            Array.Copy(languageIds, paddedLangs, seqLen);
+            // 入力配列を padLen にパディング (バッファ再利用)
+            Array.Clear(_paddedPhonemes, 0, _padLen);
+            Array.Clear(_paddedTones, 0, _padLen);
+            Array.Clear(_paddedLangs, 0, _padLen);
+            Array.Copy(phonemeIds, _paddedPhonemes, seqLen);
+            Array.Copy(tones, _paddedTones, seqLen);
+            Array.Copy(languageIds, _paddedLangs, seqLen);
 
-            // BERT 埋め込みのパディング: [1, 1024, seqLen] → [1, 1024, padLen]
-            float[] paddedJaBert = new float[HiddenSize * _padLen];
+            // BERT 埋め込みのパディング: [1, 1024, seqLen] → [1, 1024, padLen] (バッファ再利用)
+            Array.Clear(_paddedJaBert, 0, HiddenSize * _padLen);
             for (int h = 0; h < HiddenSize; h++)
             {
-                Array.Copy(jaBertEmbedding, h * seqLen, paddedJaBert, h * _padLen, seqLen);
+                Array.Copy(jaBertEmbedding, h * seqLen, _paddedJaBert, h * _padLen, seqLen);
             }
 
-            using var xTst = new Tensor<int>(new TensorShape(1, _padLen), paddedPhonemes);
+            using var xTst = new Tensor<int>(new TensorShape(1, _padLen), _paddedPhonemes);
             using var xTstLengths = new Tensor<int>(new TensorShape(1), new[] { seqLen });
-            using var tonesTensor = new Tensor<int>(new TensorShape(1, _padLen), paddedTones);
-            using var langTensor = new Tensor<int>(new TensorShape(1, _padLen), paddedLangs);
+            using var tonesTensor = new Tensor<int>(new TensorShape(1, _padLen), _paddedTones);
+            using var langTensor = new Tensor<int>(new TensorShape(1, _padLen), _paddedLangs);
             using var sidTensor = new Tensor<int>(new TensorShape(1), new[] { speakerId });
-            using var jaBertTensor = new Tensor<float>(new TensorShape(1, HiddenSize, _padLen), paddedJaBert);
+            using var jaBertTensor = new Tensor<float>(new TensorShape(1, HiddenSize, _padLen), _paddedJaBert);
             using var styleTensor = new Tensor<float>(new TensorShape(1, 256), styleVector);
             using var sdpTensor = new Tensor<float>(new TensorShape(1), new[] { sdpRatio });
             using var noiseTensor = new Tensor<float>(new TensorShape(1), new[] { noiseScale });
@@ -119,9 +143,9 @@ namespace uStyleBertVITS2.Inference
                 var sb = new StringBuilder();
                 sb.Append($"Inputs: seqLen={seqLen}, padLen={_padLen}, speakerId={speakerId}\n");
                 sb.Append($"  x_tst[0..{dumpLen - 1}]: ");
-                for (int i = 0; i < dumpLen; i++) { if (i > 0) sb.Append(' '); sb.Append(paddedPhonemes[i]); }
+                for (int i = 0; i < dumpLen; i++) { if (i > 0) sb.Append(' '); sb.Append(_paddedPhonemes[i]); }
                 sb.Append($"\n  tones[0..{dumpLen - 1}]: ");
-                for (int i = 0; i < dumpLen; i++) { if (i > 0) sb.Append(' '); sb.Append(paddedTones[i]); }
+                for (int i = 0; i < dumpLen; i++) { if (i > 0) sb.Append(' '); sb.Append(_paddedTones[i]); }
                 TTSDebugLog.Log("TTS.Model", sb.ToString());
             }
 
@@ -132,9 +156,9 @@ namespace uStyleBertVITS2.Inference
             }
             else
             {
-                // 通常モデル: bert(中国語)=零, ja_bert=日本語, en_bert(英語)=零
-                using var bertTensor = new Tensor<float>(new TensorShape(1, HiddenSize, _padLen));
-                using var enBertTensor = new Tensor<float>(new TensorShape(1, HiddenSize, _padLen));
+                // 通常モデル: bert(中国語)=零, ja_bert=日本語, en_bert(英語)=零 (バッファ再利用)
+                using var bertTensor = new Tensor<float>(new TensorShape(1, HiddenSize, _padLen), _zeroBertBuffer);
+                using var enBertTensor = new Tensor<float>(new TensorShape(1, HiddenSize, _padLen), _zeroEnBertBuffer);
                 _worker.SetInput("bert", bertTensor);
                 _worker.SetInput("ja_bert", jaBertTensor);
                 _worker.SetInput("en_bert", enBertTensor);

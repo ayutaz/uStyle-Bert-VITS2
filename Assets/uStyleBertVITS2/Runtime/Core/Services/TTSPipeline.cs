@@ -3,6 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using Unity.Profiling;
 using UnityEngine;
+using uStyleBertVITS2.Audio;
 using uStyleBertVITS2.Data;
 using uStyleBertVITS2.Diagnostics;
 using uStyleBertVITS2.Inference;
@@ -30,6 +31,7 @@ namespace uStyleBertVITS2.Services
         private readonly StyleVectorProvider _styleProvider;
         private readonly int _sampleRate;
         private readonly float _normalizationPeak;
+        private readonly float[] _styleVecBuffer = new float[StyleVectorProvider.VectorDimension];
         private bool _disposed;
 
         public TTSPipeline(
@@ -99,51 +101,59 @@ namespace uStyleBertVITS2.Services
             TTSDebugLog.Log("TTS.BERT",
                 $"bertData.Length={bertData.Length} ({tokenIds.Length} tokens × 1024 dim)");
 
-            // Stage 4: word2phアライメント
-            float[] alignedBert;
-            using (s_BertAlign.Auto())
+            // Stage 4: word2phアライメント (Burst + ArrayPool)
+            int alignedLen = BertAligner.EmbeddingDimension * phoneSeqLen;
+            float[] alignedBert = System.Buffers.ArrayPool<float>.Shared.Rent(alignedLen);
+            try
             {
-                alignedBert = BertAligner.AlignBertToPhonemes(
-                    bertData, tokenIds.Length, word2ph, phoneSeqLen);
+                using (s_BertAlign.Auto())
+                {
+                    BertAligner.AlignBertToPhonemesBurst(
+                        bertData, tokenIds.Length, word2ph, phoneSeqLen, alignedBert);
+                }
+
+                TTSDebugLog.Log("TTS.Align",
+                    $"alignedBert effective={alignedLen} ({phoneSeqLen} phonemes × 1024 dim)");
+
+                // Stage 5: スタイルベクトル取得 (バッファ再利用)
+                _styleProvider.GetVector(request.StyleId, request.StyleWeight, _styleVecBuffer);
+
+                // Stage 6: TTS推論
+                float[] audioSamples;
+                using (s_TTSInfer.Auto())
+                {
+                    audioSamples = _tts.Run(
+                        phonemeIds,
+                        tones,
+                        languageIds,
+                        request.SpeakerId,
+                        alignedBert,
+                        _styleVecBuffer,
+                        request.SdpRatio,
+                        request.NoiseScale,
+                        request.NoiseScaleW,
+                        request.LengthScale);
+                }
+
+                TTSDebugLog.Log("TTS.Model",
+                    $"audioSamples.Length={audioSamples.Length} ({(float)audioSamples.Length / _sampleRate:F2}s @ {_sampleRate}Hz)");
+
+                // Stage 7: AudioClip生成
+                AudioClip clip;
+                using (s_Audio.Auto())
+                {
+                    TTSAudioUtility.NormalizeSamplesBurst(audioSamples, _normalizationPeak);
+                    audioSamples = TrimTrailingSilence(audioSamples);
+                    clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
+                    clip.SetData(audioSamples, 0);
+                }
+
+                return clip;
             }
-
-            TTSDebugLog.Log("TTS.Align",
-                $"alignedBert.Length={alignedBert.Length} ({phoneSeqLen} phonemes × 1024 dim)");
-
-            // Stage 5: スタイルベクトル取得
-            float[] styleVec = _styleProvider.GetVector(request.StyleId, request.StyleWeight);
-
-            // Stage 6: TTS推論
-            float[] audioSamples;
-            using (s_TTSInfer.Auto())
+            finally
             {
-                audioSamples = _tts.Run(
-                    phonemeIds,
-                    tones,
-                    languageIds,
-                    request.SpeakerId,
-                    alignedBert,
-                    styleVec,
-                    request.SdpRatio,
-                    request.NoiseScale,
-                    request.NoiseScaleW,
-                    request.LengthScale);
+                System.Buffers.ArrayPool<float>.Shared.Return(alignedBert);
             }
-
-            TTSDebugLog.Log("TTS.Model",
-                $"audioSamples.Length={audioSamples.Length} ({(float)audioSamples.Length / _sampleRate:F2}s @ {_sampleRate}Hz)");
-
-            // Stage 7: AudioClip生成
-            AudioClip clip;
-            using (s_Audio.Auto())
-            {
-                NormalizeSamples(audioSamples, _normalizationPeak);
-                audioSamples = TrimTrailingSilence(audioSamples);
-                clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
-                clip.SetData(audioSamples, 0);
-            }
-
-            return clip;
         }
 
         public async UniTask<AudioClip> SynthesizeAsync(TTSRequest request, CancellationToken ct = default)
@@ -207,54 +217,62 @@ namespace uStyleBertVITS2.Services
             // --- ThreadPool: BertAlignment + StyleVector ---
             await UniTask.SwitchToThreadPool();
 
-            float[] alignedBert;
-            using (s_BertAlign.Auto())
+            int alignedLenAsync = BertAligner.EmbeddingDimension * phoneSeqLen;
+            float[] alignedBert = System.Buffers.ArrayPool<float>.Shared.Rent(alignedLenAsync);
+            try
             {
-                alignedBert = BertAligner.AlignBertToPhonemes(
-                    bertData, tokenIds.Length, word2ph, phoneSeqLen);
+                using (s_BertAlign.Auto())
+                {
+                    BertAligner.AlignBertToPhonemesBurst(
+                        bertData, tokenIds.Length, word2ph, phoneSeqLen, alignedBert);
+                }
+
+                TTSDebugLog.Log("TTS.Align",
+                    $"alignedBert effective={alignedLenAsync} ({phoneSeqLen} phonemes × 1024 dim)");
+
+                _styleProvider.GetVector(request.StyleId, request.StyleWeight, _styleVecBuffer);
+
+                ct.ThrowIfCancellationRequested();
+
+                // --- MainThread: TTS推論 + AudioClip生成 ---
+                await UniTask.SwitchToMainThread(ct);
+
+                float[] audioSamples;
+                using (s_TTSInfer.Auto())
+                {
+                    audioSamples = _tts.Run(
+                        phonemeIds,
+                        tones,
+                        languageIds,
+                        request.SpeakerId,
+                        alignedBert,
+                        _styleVecBuffer,
+                        request.SdpRatio,
+                        request.NoiseScale,
+                        request.NoiseScaleW,
+                        request.LengthScale);
+                }
+
+                TTSDebugLog.Log("TTS.Model",
+                    $"audioSamples.Length={audioSamples.Length} ({(float)audioSamples.Length / _sampleRate:F2}s @ {_sampleRate}Hz)");
+
+                ct.ThrowIfCancellationRequested();
+
+                AudioClip clip;
+                using (s_Audio.Auto())
+                {
+                    TTSAudioUtility.NormalizeSamplesBurst(audioSamples, _normalizationPeak);
+                    audioSamples = TrimTrailingSilence(audioSamples);
+                    clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
+                    clip.SetData(audioSamples, 0);
+                }
+
+                return clip;
             }
-
-            TTSDebugLog.Log("TTS.Align",
-                $"alignedBert.Length={alignedBert.Length} ({phoneSeqLen} phonemes × 1024 dim)");
-
-            float[] styleVec = _styleProvider.GetVector(request.StyleId, request.StyleWeight);
-
-            ct.ThrowIfCancellationRequested();
-
-            // --- MainThread: TTS推論 + AudioClip生成 ---
-            await UniTask.SwitchToMainThread(ct);
-
-            float[] audioSamples;
-            using (s_TTSInfer.Auto())
+            finally
             {
-                audioSamples = _tts.Run(
-                    phonemeIds,
-                    tones,
-                    languageIds,
-                    request.SpeakerId,
-                    alignedBert,
-                    styleVec,
-                    request.SdpRatio,
-                    request.NoiseScale,
-                    request.NoiseScaleW,
-                    request.LengthScale);
+                System.Buffers.ArrayPool<float>.Shared.Return(alignedBert);
             }
-
-            TTSDebugLog.Log("TTS.Model",
-                $"audioSamples.Length={audioSamples.Length} ({(float)audioSamples.Length / _sampleRate:F2}s @ {_sampleRate}Hz)");
-
-            ct.ThrowIfCancellationRequested();
-
-            AudioClip clip;
-            using (s_Audio.Auto())
-            {
-                NormalizeSamples(audioSamples, _normalizationPeak);
-                audioSamples = TrimTrailingSilence(audioSamples);
-                clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
-                clip.SetData(audioSamples, 0);
-            }
-
-            return clip;
         }
 
         private static int ArrayMin(int[] arr)
@@ -311,26 +329,6 @@ namespace uStyleBertVITS2.Services
             var result = new float[trimmedLength];
             Array.Copy(samples, result, trimmedLength);
             return result;
-        }
-
-        /// <summary>
-        /// 音声サンプルを正規化する。
-        /// </summary>
-        private static void NormalizeSamples(float[] samples, float targetPeak)
-        {
-            float maxAbs = 0f;
-            for (int i = 0; i < samples.Length; i++)
-            {
-                float abs = samples[i] < 0 ? -samples[i] : samples[i];
-                if (abs > maxAbs) maxAbs = abs;
-            }
-
-            if (maxAbs > 0f)
-            {
-                float scale = targetPeak / maxAbs;
-                for (int i = 0; i < samples.Length; i++)
-                    samples[i] *= scale;
-            }
         }
 
         public void Dispose()

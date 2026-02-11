@@ -67,6 +67,47 @@ namespace uStyleBertVITS2.Tests
         }
 
         [Test]
+        public void BurstVersion_MatchesCPU()
+        {
+            int tokenLen = 4;
+            int[] word2ph = { 1, 3, 2, 1 };
+            int phoneSeqLen = 7;
+
+            float[] bertFlat = new float[BertAligner.EmbeddingDimension * tokenLen];
+            for (int d = 0; d < BertAligner.EmbeddingDimension; d++)
+                for (int t = 0; t < tokenLen; t++)
+                    bertFlat[d * tokenLen + t] = d * 100f + t * 0.1f;
+
+            float[] cpuResult = BertAligner.AlignBertToPhonemes(bertFlat, tokenLen, word2ph, phoneSeqLen);
+            float[] burstResult = BertAligner.AlignBertToPhonemesBurst(bertFlat, tokenLen, word2ph, phoneSeqLen);
+
+            Assert.AreEqual(cpuResult.Length, burstResult.Length);
+            for (int i = 0; i < cpuResult.Length; i++)
+                Assert.AreEqual(cpuResult[i], burstResult[i], 1e-6f, $"index {i} mismatch");
+        }
+
+        [Test]
+        public void BurstVersion_DestOverload_WorksWithLargerBuffer()
+        {
+            int tokenLen = 2;
+            int[] word2ph = { 2, 1 };
+            int phoneSeqLen = 3;
+
+            float[] bertFlat = new float[BertAligner.EmbeddingDimension * tokenLen];
+            for (int i = 0; i < bertFlat.Length; i++)
+                bertFlat[i] = i * 0.01f;
+
+            // ArrayPool scenario: dest is larger than needed
+            int requiredLen = BertAligner.EmbeddingDimension * phoneSeqLen;
+            float[] dest = new float[requiredLen + 512];
+            BertAligner.AlignBertToPhonemesBurst(bertFlat, tokenLen, word2ph, phoneSeqLen, dest);
+
+            float[] expected = BertAligner.AlignBertToPhonemes(bertFlat, tokenLen, word2ph, phoneSeqLen);
+            for (int i = 0; i < requiredLen; i++)
+                Assert.AreEqual(expected[i], dest[i], 1e-6f, $"index {i} mismatch");
+        }
+
+        [Test]
         public void ThrowsOnMismatchedSum()
         {
             int tokenLen = 2;

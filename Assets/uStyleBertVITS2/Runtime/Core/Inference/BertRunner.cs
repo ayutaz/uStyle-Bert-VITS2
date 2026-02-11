@@ -17,18 +17,24 @@ namespace uStyleBertVITS2.Inference
 
         private Worker _worker;
         private readonly int _padLen;
+        private readonly int[] _paddedIds;
+        private readonly int[] _paddedMask;
         private bool _disposed;
 
         public BertRunner(ModelAsset modelAsset, BackendType backendType)
         {
             var model = ModelLoader.Load(modelAsset);
             _padLen = GetSeqLenFromModel(model);
+            _paddedIds = new int[_padLen];
+            _paddedMask = new int[_padLen];
             _worker = new Worker(model, backendType);
         }
 
         internal BertRunner(Model model, BackendType backendType)
         {
             _padLen = GetSeqLenFromModel(model);
+            _paddedIds = new int[_padLen];
+            _paddedMask = new int[_padLen];
             _worker = new Worker(model, backendType);
         }
 
@@ -55,14 +61,14 @@ namespace uStyleBertVITS2.Inference
                     $"Token length {tokenLen} exceeds model capacity {_padLen}. " +
                     "Re-export the ONNX model with a larger seq_len.");
 
-            // パディング: tokenIds, attentionMask を padLen に合わせる
-            int[] paddedIds = new int[_padLen];
-            int[] paddedMask = new int[_padLen];
-            Array.Copy(tokenIds, paddedIds, tokenLen);
-            Array.Copy(attentionMask, paddedMask, tokenLen);
+            // パディング: tokenIds, attentionMask を padLen に合わせる (バッファ再利用)
+            Array.Clear(_paddedIds, 0, _padLen);
+            Array.Clear(_paddedMask, 0, _padLen);
+            Array.Copy(tokenIds, _paddedIds, tokenLen);
+            Array.Copy(attentionMask, _paddedMask, tokenLen);
 
-            using var inputIds = new Tensor<int>(new TensorShape(1, _padLen), paddedIds);
-            using var mask = new Tensor<int>(new TensorShape(1, _padLen), paddedMask);
+            using var inputIds = new Tensor<int>(new TensorShape(1, _padLen), _paddedIds);
+            using var mask = new Tensor<int>(new TensorShape(1, _padLen), _paddedMask);
 
             _worker.SetInput("input_ids", inputIds);
             _worker.SetInput("attention_mask", mask);

@@ -17,6 +17,7 @@ namespace uStyleBertVITS2.TextProcessing
                 return string.Empty;
 
             var sb = new StringBuilder(text.Length);
+            bool prevWasSpace = true; // 先頭スペースをスキップするために true で開始
 
             for (int i = 0; i < text.Length; i++)
             {
@@ -26,25 +27,34 @@ namespace uStyleBertVITS2.TextProcessing
                 if (c >= '\uFF01' && c <= '\uFF5E')
                 {
                     sb.Append((char)(c - 0xFEE0));
+                    prevWasSpace = false;
                     continue;
                 }
 
-                // 全角スペース→半角
+                // 全角スペース→半角スペースとして扱う
                 if (c == '\u3000')
+                    c = ' ';
+
+                // 連続スペース圧縮 + 先頭スペーススキップ
+                if (c == ' ')
                 {
-                    sb.Append(' ');
+                    if (!prevWasSpace)
+                    {
+                        sb.Append(' ');
+                        prevWasSpace = true;
+                    }
                     continue;
                 }
 
                 sb.Append(c);
+                prevWasSpace = false;
             }
 
-            // 連続スペースを1つに
-            string result = sb.ToString();
-            while (result.Contains("  "))
-                result = result.Replace("  ", " ");
+            // 末尾スペース除去
+            if (sb.Length > 0 && sb[sb.Length - 1] == ' ')
+                sb.Length--;
 
-            return result.Trim();
+            return sb.ToString();
         }
     }
 }

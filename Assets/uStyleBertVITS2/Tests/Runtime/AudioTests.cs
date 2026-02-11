@@ -64,6 +64,39 @@ namespace uStyleBertVITS2.Tests
         }
 
         [Test]
+        public void NormalizeSamplesBurst_MatchesScalar()
+        {
+            // Short array (scalar fallback path)
+            float[] shortSamples = { -2.0f, 0.5f, 3.0f, -1.5f, 0.0f };
+            float[] shortCopy = (float[])shortSamples.Clone();
+            TTSAudioUtility.NormalizeSamples(shortSamples, 0.95f);
+            TTSAudioUtility.NormalizeSamplesBurst(shortCopy, 0.95f);
+
+            Assert.AreEqual(shortSamples.Length, shortCopy.Length);
+            for (int i = 0; i < shortSamples.Length; i++)
+                Assert.AreEqual(shortSamples[i], shortCopy[i], 1e-6f, $"short[{i}] mismatch");
+
+            // Long array (Burst path, >= 4096)
+            int longLen = 8192;
+            float[] longSamples = new float[longLen];
+            for (int i = 0; i < longLen; i++)
+                longSamples[i] = Mathf.Sin(2f * Mathf.PI * 440f * i / 44100f) * 2.5f;
+            float[] longCopy = (float[])longSamples.Clone();
+            TTSAudioUtility.NormalizeSamples(longSamples, 0.95f);
+            TTSAudioUtility.NormalizeSamplesBurst(longCopy, 0.95f);
+
+            for (int i = 0; i < longLen; i++)
+                Assert.AreEqual(longSamples[i], longCopy[i], 1e-5f, $"long[{i}] mismatch");
+        }
+
+        [Test]
+        public void NormalizeSamplesBurst_EmptyAndNull_NoThrow()
+        {
+            Assert.DoesNotThrow(() => TTSAudioUtility.NormalizeSamplesBurst(null));
+            Assert.DoesNotThrow(() => TTSAudioUtility.NormalizeSamplesBurst(new float[0]));
+        }
+
+        [Test]
         public void LargeSamplesHandled()
         {
             // 10秒分 (441000サンプル)

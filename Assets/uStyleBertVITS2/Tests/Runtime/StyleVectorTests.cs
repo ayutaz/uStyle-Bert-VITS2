@@ -83,6 +83,25 @@ namespace uStyleBertVITS2.Tests
         }
 
         [Test]
+        public void GetVector_DestOverload_MatchesAlloc()
+        {
+            float[] allocResult = _provider.GetVector(1, 0.5f);
+            float[] dest = new float[StyleVectorProvider.VectorDimension];
+            _provider.GetVector(1, 0.5f, dest);
+
+            for (int i = 0; i < StyleVectorProvider.VectorDimension; i++)
+                Assert.AreEqual(allocResult[i], dest[i], 1e-6f, $"dim {i} mismatch");
+        }
+
+        [Test]
+        public void GetVector_DestOverload_ThrowsOnSmallBuffer()
+        {
+            float[] tooSmall = new float[128];
+            Assert.Throws<ArgumentException>(() =>
+                _provider.GetVector(0, 1f, tooSmall));
+        }
+
+        [Test]
         public void WeightedInterpolation()
         {
             // weight=0 → mean(index0)のまま, weight=1 → style(index1)そのもの

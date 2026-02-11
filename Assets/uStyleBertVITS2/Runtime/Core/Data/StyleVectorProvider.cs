@@ -67,6 +67,19 @@ namespace uStyleBertVITS2.Data
         /// <param name="weight">スタイルの強度 (0.0-1.0)</param>
         public float[] GetVector(int styleId, float weight = 1.0f)
         {
+            float[] result = new float[VectorDimension];
+            GetVector(styleId, weight, result);
+            return result;
+        }
+
+        /// <summary>
+        /// スタイルベクトルを事前確保済みバッファに書き込む (GCアロケーション回避)。
+        /// </summary>
+        /// <param name="styleId">スタイルインデックス</param>
+        /// <param name="weight">スタイルの強度 (0.0-1.0)</param>
+        /// <param name="dest">書き込み先バッファ (長さ >= VectorDimension)</param>
+        public void GetVector(int styleId, float weight, float[] dest)
+        {
             if (!_loaded)
                 throw new InvalidOperationException("Style vectors not loaded. Call Load() first.");
 
@@ -74,7 +87,10 @@ namespace uStyleBertVITS2.Data
                 throw new ArgumentOutOfRangeException(nameof(styleId),
                     $"styleId must be 0-{_numStyles - 1}, got {styleId}.");
 
-            float[] result = new float[VectorDimension];
+            if (dest == null || dest.Length < VectorDimension)
+                throw new ArgumentException(
+                    $"dest must have at least {VectorDimension} elements.", nameof(dest));
+
             int meanOffset = 0; // index 0 = ニュートラル基準 (mean)
             int styleOffset = styleId * VectorDimension;
 
@@ -82,10 +98,8 @@ namespace uStyleBertVITS2.Data
             {
                 float mean = _flatData[meanOffset + i];
                 float style = _flatData[styleOffset + i];
-                result[i] = mean + (style - mean) * weight;
+                dest[i] = mean + (style - mean) * weight;
             }
-
-            return result;
         }
 
         /// <summary>

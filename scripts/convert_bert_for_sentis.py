@@ -73,6 +73,11 @@ def main():
     parser.add_argument(
         "--seq-len", type=int, default=50, help="Dummy sequence length for export"
     )
+    parser.add_argument(
+        "--no-dynamic",
+        action="store_true",
+        help="Export with fixed sequence length (no dynamic axes)",
+    )
     args = parser.parse_args()
 
     print(f"Loading model: {args.model_name}")
@@ -90,7 +95,17 @@ def main():
 
     # ONNX エクスポート
     temp_path = "deberta_temp.onnx"
-    print(f"Exporting ONNX (opset 15)...")
+    dynamic_axes = (
+        None
+        if args.no_dynamic
+        else {
+            "input_ids": {1: "token_len"},
+            "token_type_ids": {1: "token_len"},
+            "attention_mask": {1: "token_len"},
+            "output": {2: "token_len"},
+        }
+    )
+    print(f"Exporting ONNX (opset 15, dynamic={not args.no_dynamic})...")
     torch.onnx.export(
         wrapper,
         (dummy_input_ids, dummy_token_type_ids, dummy_attention_mask),
@@ -99,12 +114,7 @@ def main():
         dynamo=False,
         input_names=["input_ids", "token_type_ids", "attention_mask"],
         output_names=["output"],
-        dynamic_axes={
-            "input_ids": {1: "token_len"},
-            "token_type_ids": {1: "token_len"},
-            "attention_mask": {1: "token_len"},
-            "output": {2: "token_len"},
-        },
+        dynamic_axes=dynamic_axes,
     )
 
     # 後処理

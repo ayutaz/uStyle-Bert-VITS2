@@ -1,7 +1,12 @@
 using System;
+using System.IO;
 using NUnit.Framework;
+using Unity.InferenceEngine;
 using UnityEngine;
 using uStyleBertVITS2.Inference;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace uStyleBertVITS2.Tests
 {
@@ -13,16 +18,25 @@ namespace uStyleBertVITS2.Tests
     [Category("RequiresModel")]
     public class InferenceTests
     {
-        // テストはモデルファイルが配置されている環境でのみ動作。
-        // モデルアセットはInspector経由で設定する必要があるため、
-        // ここではnullチェックでスキップする。
+        private const string DeBERTaAssetPath = "Assets/uStyleBertVITS2/Models/deberta_fp32.onnx";
+        private const string SBV2AssetPath = "Assets/uStyleBertVITS2/Models/sbv2_model_fp32.onnx";
+
+        private static ModelAsset LoadModelAsset(string assetPath)
+        {
+#if UNITY_EDITOR
+            var asset = AssetDatabase.LoadAssetAtPath<ModelAsset>(assetPath);
+            if (asset == null)
+                Assert.Ignore($"ModelAsset not found at: {assetPath}");
+            return asset;
+#else
+            Assert.Ignore("Model loading only supported in Editor.");
+            return null;
+#endif
+        }
 
         [Test]
         public void BertRunner_Dispose()
         {
-            // Disposeが二重呼び出しで安全であることを確認
-            // (モデルなしでも Dispose のみのテストは可能ではないが、
-            //  パターンとして記載)
             Assert.Pass("BertRunner double-Dispose safety is verified by code review.");
         }
 
@@ -37,7 +51,6 @@ namespace uStyleBertVITS2.Tests
         {
             using var manager = new ModelAssetManager();
             Assert.AreEqual(0, manager.WorkerCount);
-            // Disposeが安全に動作すること
         }
 
         [Test]
@@ -45,7 +58,6 @@ namespace uStyleBertVITS2.Tests
         {
             var manager = new ModelAssetManager();
             manager.Dispose();
-            // 二重Disposeでも例外が出ないこと
             Assert.DoesNotThrow(() => manager.Dispose());
         }
 
@@ -56,52 +68,96 @@ namespace uStyleBertVITS2.Tests
             Assert.IsFalse(manager.HasWorker("nonexistent"));
         }
 
-        // --- 以下はモデルが必要なテスト ---
-        // 実際のONNXモデルが配置された環境でのみ動作する。
-        // CI環境では [Category("RequiresModel")] でスキップ。
+        // --- DeBERTa 推論テスト ---
 
-        /*
         [Test]
         public void BertRunner_Loads()
         {
-            // ModelAssetをInspector経由で設定して実行
-        }
-
-        [Test]
-        public void BertRunner_RunDummy()
-        {
-            // ダミー入力 [CLS]=1, x=100, [SEP]=2 で推論実行
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            using var runner = new BertRunner(asset, BackendType.CPU);
+            Assert.Pass("BertRunner loaded successfully.");
         }
 
         [Test]
         public void BertRunner_OutputShape()
         {
-            // 出力が [1, 1024, token_len] であることを確認
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            using var runner = new BertRunner(asset, BackendType.CPU);
+
+            int[] tokenIds = { 1, 100, 2 };
+            int[] mask = { 1, 1, 1 };
+            float[] output = runner.Run(tokenIds, mask);
+
+            Assert.AreEqual(1 * 1024 * 3, output.Length,
+                $"Expected 3072 elements but got {output.Length}");
         }
+
+        [Test]
+        public void BertRunner_OutputNonZero()
+        {
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            using var runner = new BertRunner(asset, BackendType.CPU);
+
+            int[] tokenIds = { 1, 100, 2 };
+            int[] mask = { 1, 1, 1 };
+            float[] output = runner.Run(tokenIds, mask);
+
+            bool hasNonZero = false;
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (output[i] != 0f) { hasNonZero = true; break; }
+            }
+            Assert.IsTrue(hasNonZero, "BERT output should contain non-zero values");
+        }
+
+        [Test]
+        public void BertRunner_DoubleDispose()
+        {
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            var runner = new BertRunner(asset, BackendType.CPU);
+            runner.Dispose();
+            Assert.DoesNotThrow(() => runner.Dispose());
+        }
+
+        // --- SBV2 推論テスト ---
 
         [Test]
         public void SBV2Runner_Loads()
         {
-            // ModelAssetをInspector経由で設定して実行
+            var asset = LoadModelAsset(SBV2AssetPath);
+            using var runner = new SBV2ModelRunner(asset, BackendType.CPU);
+            Assert.Pass("SBV2ModelRunner loaded successfully.");
         }
 
         [Test]
         public void SBV2Runner_RunDummy()
         {
-            // ダミー入力で音声出力が得られることを確認
+            var asset = LoadModelAsset(SBV2AssetPath);
+            using var runner = new SBV2ModelRunner(asset, BackendType.CPU);
+
+            // モデルは seq_len=20 で静的エクスポート済み
+            int seqLen = 20;
+            int[] phonemeIds = new int[seqLen];
+            int[] tones = new int[seqLen];
+            int[] langIds = new int[seqLen];
+            // 先頭と末尾に SP (0)、中間にダミー音素
+            phonemeIds[0] = 0; phonemeIds[seqLen - 1] = 0;
+            for (int i = 1; i < seqLen - 1; i++) { phonemeIds[i] = 23; tones[i] = 7; langIds[i] = 1; }
+            float[] jaBert = new float[1024 * seqLen];
+            float[] style = new float[256];
+
+            float[] audio = runner.Run(phonemeIds, tones, langIds, 0, jaBert, style,
+                0.0f, 0.667f, 0.8f, 1.0f);
+            Assert.IsTrue(audio.Length > 0, "SBV2 output should contain audio samples");
         }
 
         [Test]
-        public void SBV2Runner_OutputNonEmpty()
+        public void SBV2Runner_DoubleDispose()
         {
-            // 出力配列が非空であることを確認
+            var asset = LoadModelAsset(SBV2AssetPath);
+            var runner = new SBV2ModelRunner(asset, BackendType.CPU);
+            runner.Dispose();
+            Assert.DoesNotThrow(() => runner.Dispose());
         }
-
-        [Test]
-        public void FallbackBackend()
-        {
-            // GPU→CPUフォールバックが動作することを確認
-        }
-        */
     }
 }

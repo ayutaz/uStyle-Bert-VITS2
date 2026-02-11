@@ -38,10 +38,14 @@ def convert_int64_to_int32(model: onnx.ModelProto) -> onnx.ModelProto:
     # 初期化テンソル (weights)
     for initializer in model.graph.initializer:
         if initializer.data_type == onnx.TensorProto.INT64:
-            data = np.array(initializer.int64_data, dtype=np.int64).astype(np.int32)
+            if initializer.raw_data:
+                data = np.frombuffer(initializer.raw_data, dtype=np.int64).astype(np.int32)
+                initializer.raw_data = data.tobytes()
+            elif initializer.int64_data:
+                data = np.array(initializer.int64_data, dtype=np.int64).astype(np.int32)
+                initializer.int64_data[:] = []
+                initializer.int32_data.extend(data.tolist())
             initializer.data_type = onnx.TensorProto.INT32
-            initializer.int64_data[:] = []
-            initializer.int32_data.extend(data.tolist())
 
     return model
 

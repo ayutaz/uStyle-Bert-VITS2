@@ -168,6 +168,8 @@ def export_onnx(
     hps: HyperParameters,
     output_path: Path,
     no_fp16: bool = False,
+    no_dynamic: bool = False,
+    no_simplify: bool = False,
     opset_version: int = 15,
 ):
     """モデルを Sentis 互換 ONNX にエクスポート"""
@@ -196,15 +198,29 @@ def export_onnx(
             x, x_lengths, sid, tone, language, bert, style_vec,
             length_scale=1.0, sdp_ratio=0.0, noise_scale=0.667, noise_scale_w=0.8,
         ):
-            return cast(SynthesizerTrnJPExtra, net_g).infer(
+            o, _, _, _ = cast(SynthesizerTrnJPExtra, net_g).infer(
                 x, x_lengths, sid, tone, language, bert, style_vec,
                 length_scale=length_scale, sdp_ratio=sdp_ratio,
                 noise_scale=noise_scale, noise_scale_w=noise_scale_w,
             )
+            return o
 
         net_g.forward = forward_jp_extra  # type: ignore
 
-        print("Exporting ONNX (JP-Extra)...")
+        jp_extra_dynamic_axes = (
+            None
+            if no_dynamic
+            else {
+                "x_tst": {0: "batch_size", 1: "x_tst_max_length"},
+                "x_tst_lengths": {0: "batch_size"},
+                "sid": {0: "batch_size"},
+                "tones": {0: "batch_size", 1: "x_tst_max_length"},
+                "language": {0: "batch_size", 1: "x_tst_max_length"},
+                "bert": {0: "batch_size", 2: "x_tst_max_length"},
+                "style_vec": {0: "batch_size"},
+            }
+        )
+        print(f"Exporting ONNX (JP-Extra, dynamic={not no_dynamic})...")
         export_start = time.time()
         torch.onnx.export(
             model=net_g,
@@ -222,15 +238,7 @@ def export_onnx(
                 "length_scale", "sdp_ratio", "noise_scale", "noise_scale_w",
             ],
             output_names=["output"],
-            dynamic_axes={
-                "x_tst": {0: "batch_size", 1: "x_tst_max_length"},
-                "x_tst_lengths": {0: "batch_size"},
-                "sid": {0: "batch_size"},
-                "tones": {0: "batch_size", 1: "x_tst_max_length"},
-                "language": {0: "batch_size", 1: "x_tst_max_length"},
-                "bert": {0: "batch_size", 2: "x_tst_max_length"},
-                "style_vec": {0: "batch_size"},
-            },
+            dynamic_axes=jp_extra_dynamic_axes,
         )
         print(f"ONNX exported ({time.time() - export_start:.1f}s)")
     else:
@@ -241,15 +249,31 @@ def export_onnx(
             x, x_lengths, sid, tone, language, bert, ja_bert, en_bert, style_vec,
             length_scale=1.0, sdp_ratio=0.0, noise_scale=0.667, noise_scale_w=0.8,
         ):
-            return cast(SynthesizerTrn, net_g).infer(
+            o, _, _, _ = cast(SynthesizerTrn, net_g).infer(
                 x, x_lengths, sid, tone, language, bert, ja_bert, en_bert, style_vec,
                 length_scale=length_scale, sdp_ratio=sdp_ratio,
                 noise_scale=noise_scale, noise_scale_w=noise_scale_w,
             )
+            return o
 
         net_g.forward = forward_non_jp_extra  # type: ignore
 
-        print("Exporting ONNX (Non-JP-Extra)...")
+        non_jp_dynamic_axes = (
+            None
+            if no_dynamic
+            else {
+                "x_tst": {0: "batch_size", 1: "x_tst_max_length"},
+                "x_tst_lengths": {0: "batch_size"},
+                "sid": {0: "batch_size"},
+                "tones": {0: "batch_size", 1: "x_tst_max_length"},
+                "language": {0: "batch_size", 1: "x_tst_max_length"},
+                "bert": {0: "batch_size", 2: "x_tst_max_length"},
+                "ja_bert": {0: "batch_size", 2: "x_tst_max_length"},
+                "en_bert": {0: "batch_size", 2: "x_tst_max_length"},
+                "style_vec": {0: "batch_size"},
+            }
+        )
+        print(f"Exporting ONNX (Non-JP-Extra, dynamic={not no_dynamic})...")
         export_start = time.time()
         torch.onnx.export(
             model=net_g,
@@ -268,17 +292,7 @@ def export_onnx(
                 "length_scale", "sdp_ratio", "noise_scale", "noise_scale_w",
             ],
             output_names=["output"],
-            dynamic_axes={
-                "x_tst": {0: "batch_size", 1: "x_tst_max_length"},
-                "x_tst_lengths": {0: "batch_size"},
-                "sid": {0: "batch_size"},
-                "tones": {0: "batch_size", 1: "x_tst_max_length"},
-                "language": {0: "batch_size", 1: "x_tst_max_length"},
-                "bert": {0: "batch_size", 2: "x_tst_max_length"},
-                "ja_bert": {0: "batch_size", 2: "x_tst_max_length"},
-                "en_bert": {0: "batch_size", 2: "x_tst_max_length"},
-                "style_vec": {0: "batch_size"},
-            },
+            dynamic_axes=non_jp_dynamic_axes,
         )
         print(f"ONNX exported ({time.time() - export_start:.1f}s)")
 
@@ -286,13 +300,23 @@ def export_onnx(
     print("Loading exported ONNX...")
     model = onnx.load(temp_path)
 
-    print("Simplifying with onnxsim...")
-    model, check = simplify(model)
-    if not check:
-        print("Warning: onnxsim simplification check failed")
+    if not no_simplify:
+        print("Simplifying with onnxsim...")
+        model, check = simplify(model)
+        if not check:
+            print("Warning: onnxsim simplification check failed")
+    else:
+        print("Skipping onnxsim simplification.")
 
     print("Converting int64 -> int32...")
     model = convert_int64_to_int32(model)
+
+    # Sentis は0次元テンソル (scalar []) を扱えないため [1] に変換
+    for inp in model.graph.input:
+        if len(inp.type.tensor_type.shape.dim) == 0:
+            new_dim = inp.type.tensor_type.shape.dim.add()
+            new_dim.dim_value = 1
+            print(f"  Fixed scalar input: {inp.name} [] -> [1]")
 
     if not no_fp16:
         print("Converting to FP16...")
@@ -339,6 +363,16 @@ def main():
         "--no-fp16", action="store_true", help="Skip FP16 conversion"
     )
     parser.add_argument(
+        "--no-dynamic",
+        action="store_true",
+        help="Export with fixed sequence length (no dynamic axes)",
+    )
+    parser.add_argument(
+        "--no-simplify",
+        action="store_true",
+        help="Skip onnxsim simplification",
+    )
+    parser.add_argument(
         "--cache-dir",
         type=str,
         default=".cache/sbv2",
@@ -363,7 +397,11 @@ def main():
     net_g, hps = build_model(config_path, model_path)
 
     # 4. ONNX エクスポート + 後処理
-    export_onnx(net_g, hps, Path(args.output), no_fp16=args.no_fp16)
+    export_onnx(
+        net_g, hps, Path(args.output),
+        no_fp16=args.no_fp16, no_dynamic=args.no_dynamic,
+        no_simplify=args.no_simplify,
+    )
 
 
 if __name__ == "__main__":

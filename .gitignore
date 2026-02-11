@@ -69,4 +69,5 @@ scripts/.venv/
 Assets/StreamingAssets/uStyleBertVITS2/Models/
 Assets/StreamingAssets/uStyleBertVITS2/OpenJTalkDic/
 Assets/StreamingAssets/uStyleBertVITS2/Tokenizer/
+Assets/uStyleBertVITS2/Models/
 Assets/uStyleBertVITS2/Plugins/**/openjtalk_wrapper*

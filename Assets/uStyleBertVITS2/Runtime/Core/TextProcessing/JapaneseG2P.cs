@@ -52,21 +52,24 @@ namespace uStyleBertVITS2.TextProcessing
             text = TextNormalizer.Normalize(text);
 
             // OpenJTalkでプロソディ付き音素変換
-            int ret = OpenJTalkNative.openjtalk_phonemize_with_prosody(
-                _handle.DangerousGetHandle(), text,
-                out var nativeResult);
+            IntPtr resultPtr = OpenJTalkNative.openjtalk_phonemize_with_prosody(
+                _handle.DangerousGetHandle(), text);
 
-            if (ret != 0)
+            if (resultPtr == IntPtr.Zero)
+            {
+                int err = OpenJTalkNative.openjtalk_get_last_error(_handle.DangerousGetHandle());
                 throw new InvalidOperationException(
-                    $"OpenJTalk phonemize failed with code {ret}");
+                    $"OpenJTalk phonemize failed with error code {err}");
+            }
 
             try
             {
+                var nativeResult = Marshal.PtrToStructure<OpenJTalkNative.NativeProsodyPhonemeResult>(resultPtr);
                 return ConvertNativeResult(nativeResult, text);
             }
             finally
             {
-                OpenJTalkNative.openjtalk_free_prosody_result(ref nativeResult);
+                OpenJTalkNative.openjtalk_free_prosody_result(resultPtr);
             }
         }
 
@@ -78,14 +81,15 @@ namespace uStyleBertVITS2.TextProcessing
                 throw new InvalidOperationException("OpenJTalk returned no phonemes.");
 
             // ネイティブ結果からマネージド配列にコピー
-            string[] rawPhonemes = new string[count];
-            int[] prosodyValues = new int[count];
+            // phonemes はスペース区切り文字列
+            string phonemeStr = Marshal.PtrToStringUTF8(nativeResult.phonemes) ?? string.Empty;
+            string[] rawPhonemes = phonemeStr.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
+            // prosodyA1 配列を読み取り（トーン計算に使用）
+            int[] prosodyA1Values = new int[count];
             for (int i = 0; i < count; i++)
             {
-                IntPtr strPtr = Marshal.ReadIntPtr(nativeResult.phonemes, i * IntPtr.Size);
-                rawPhonemes[i] = Marshal.PtrToStringUTF8(strPtr) ?? string.Empty;
-                prosodyValues[i] = Marshal.ReadInt32(nativeResult.prosodyValues, i * sizeof(int));
+                prosodyA1Values[i] = Marshal.ReadInt32(nativeResult.prosodyA1, i * sizeof(int));
             }
 
             // SBV2形式に変換
@@ -98,7 +102,8 @@ namespace uStyleBertVITS2.TextProcessing
             tones.Add(0);
             languageIds.Add(JapaneseLanguageId);
 
-            for (int i = 0; i < count; i++)
+            int phonemeCount = Math.Min(rawPhonemes.Length, count);
+            for (int i = 0; i < phonemeCount; i++)
             {
                 string phoneme = rawPhonemes[i];
                 if (string.IsNullOrEmpty(phoneme)) continue;
@@ -110,8 +115,8 @@ namespace uStyleBertVITS2.TextProcessing
                 int id = _mapper.GetId(phoneme);
                 phonemeIds.Add(id);
 
-                // トーン計算: プロソディ値にオフセットを加算
-                int tone = (prosodyValues[i] > 0) ? prosodyValues[i] + ToneOffset : ToneOffset;
+                // トーン計算: A1 プロソディ値にオフセットを加算
+                int tone = (prosodyA1Values[i] > 0) ? prosodyA1Values[i] + ToneOffset : ToneOffset;
                 tones.Add(tone);
 
                 languageIds.Add(JapaneseLanguageId);

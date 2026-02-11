@@ -18,22 +18,29 @@ namespace uStyleBertVITS2.Native
 
         /// <summary>
         /// 音素結果構造体（ネイティブ側から返される）。
+        /// openjtalk_phonemize() はこのポインタを返す。
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct NativePhonemeResult
         {
-            public IntPtr phonemes;   // char** — null終端の音素文字列配列
+            public IntPtr phonemes;       // char* — スペース区切り音素文字列
+            public IntPtr phonemeIds;     // int* — 音素ID配列
             public int phonemeCount;
+            public IntPtr durations;      // float* — 各音素の持続時間
+            public float totalDuration;
         }
 
         /// <summary>
         /// プロソディ付き音素結果構造体。
+        /// openjtalk_phonemize_with_prosody() はこのポインタを返す。
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct NativeProsodyPhonemeResult
         {
-            public IntPtr phonemes;        // char** — null終端の音素文字列配列
-            public IntPtr prosodyValues;   // int* — プロソディ値配列
+            public IntPtr phonemes;        // char* — スペース区切り音素文字列
+            public IntPtr prosodyA1;       // int* — A1: アクセント核からの相対位置
+            public IntPtr prosodyA2;       // int* — A2: アクセント句内位置 (1-based)
+            public IntPtr prosodyA3;       // int* — A3: アクセント句のモーラ数
             public int phonemeCount;
         }
 
@@ -54,32 +61,38 @@ namespace uStyleBertVITS2.Native
 
         /// <summary>
         /// テキストを音素に変換する。
+        /// 戻り値は PhonemeResult* ポインタ。失敗時は IntPtr.Zero。
         /// </summary>
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int openjtalk_phonemize(
+        public static extern IntPtr openjtalk_phonemize(
             IntPtr handle,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string text,
-            out NativePhonemeResult result);
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string text);
 
         /// <summary>
         /// テキストを音素に変換する（プロソディ情報付き）。
+        /// 戻り値は ProsodyPhonemeResult* ポインタ。失敗時は IntPtr.Zero。
         /// </summary>
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern int openjtalk_phonemize_with_prosody(
+        public static extern IntPtr openjtalk_phonemize_with_prosody(
             IntPtr handle,
-            [MarshalAs(UnmanagedType.LPUTF8Str)] string text,
-            out NativeProsodyPhonemeResult result);
+            [MarshalAs(UnmanagedType.LPUTF8Str)] string text);
 
         /// <summary>
         /// 音素結果のメモリを解放する。
         /// </summary>
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void openjtalk_free_phoneme_result(ref NativePhonemeResult result);
+        public static extern void openjtalk_free_result(IntPtr result);
 
         /// <summary>
         /// プロソディ付き音素結果のメモリを解放する。
         /// </summary>
         [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern void openjtalk_free_prosody_result(ref NativeProsodyPhonemeResult result);
+        public static extern void openjtalk_free_prosody_result(IntPtr result);
+
+        /// <summary>
+        /// 最後のエラーコードを取得する。
+        /// </summary>
+        [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int openjtalk_get_last_error(IntPtr handle);
     }
 }

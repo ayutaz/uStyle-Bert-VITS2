@@ -64,3 +64,9 @@ crashlytics-build.properties
 
 # Python virtual environment
 scripts/.venv/
+
+# Large binary assets (models, DLL, dictionaries)
+Assets/StreamingAssets/uStyleBertVITS2/Models/
+Assets/StreamingAssets/uStyleBertVITS2/OpenJTalkDic/
+Assets/StreamingAssets/uStyleBertVITS2/Tokenizer/
+Assets/uStyleBertVITS2/Plugins/**/openjtalk_wrapper*

@@ -96,6 +96,7 @@ def main():
         (dummy_input_ids, dummy_token_type_ids, dummy_attention_mask),
         temp_path,
         opset_version=15,
+        dynamo=False,
         input_names=["input_ids", "token_type_ids", "attention_mask"],
         output_names=["output"],
         dynamic_axes={
@@ -118,7 +119,13 @@ def main():
 
     if not args.no_fp16:
         print("Converting to FP16...")
-        model = float16.convert_float_to_float16(model, keep_io_types=True)
+        try:
+            model = float16.convert_float_to_float16(model, keep_io_types=True)
+        except ValueError:
+            # onnxsim may partially convert to fp16, retry with check disabled
+            model = float16.convert_float_to_float16(
+                model, keep_io_types=True, check_fp16_ready=False
+            )
 
     output_path = Path(args.output)
     print(f"Saving to: {output_path}")

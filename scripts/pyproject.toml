@@ -2,14 +2,18 @@
 name = "scripts"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.13"
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "numpy>=2.4.2",
+    "numpy>=1.24,<2.3",
     "onnx>=1.20.1",
     "onnxconverter-common>=1.16.0",
     "onnxruntime>=1.24.1",
+    "onnxscript>=0.2.0",
     "onnxsim>=0.4.36",
     "safetensors>=0.7.0",
     "torch>=2.10.0",
     "transformers>=5.1.0",
+    "huggingface-hub>=0.28.0",
+    "pydantic>=2.0",
+    "numba>=0.60.0",
 ]

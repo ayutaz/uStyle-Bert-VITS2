@@ -141,6 +141,7 @@ float[] data = output.DownloadToArray();
 
 ### BERT埋め込み
 - **ランタイム DeBERTa 推論**: `BertRunner` が padLen 自動検出・パディング・トリム処理を実行。`CachedBertRunner` で LRU キャッシュによる重複推論回避
+- **dest バッファオーバーロード**: `Run(tokenIds, mask, dest)` で事前確保バッファに書き込み、GC アロケーション回避。出力トリムは `UnsafeUtility.MemCpy` で高速化
 - `token_type_ids` は不要（onnxsim で定数化済み）
 
 ### 非同期パイプライン
@@ -155,8 +156,8 @@ Assets/uStyleBertVITS2/
   Runtime/
     Core/
       Inference/
-        BertRunner.cs              # DeBERTa推論（padLen自動検出・パディング）
-        SBV2ModelRunner.cs         # TTS推論（JP-Extra自動判定・パディング）
+        BertRunner.cs              # DeBERTa推論（padLen自動検出・パディング・dest overload・unsafe MemCpy）
+        SBV2ModelRunner.cs         # TTS推論（JP-Extra自動判定・unsafe パディング・スカラーバッファ再利用）
         ModelAssetManager.cs       # モデルロード・ライフサイクル管理
         CachedBertRunner.cs        # LRUキャッシュ付きBERT推論
         TTSWarmup.cs               # シェーダコンパイル事前ウォームアップ
@@ -180,7 +181,7 @@ Assets/uStyleBertVITS2/
         ModelConfiguration.cs      # モデルパス設定
       Services/
         ITTSPipeline.cs            # パイプラインインターフェース
-        TTSPipeline.cs             # メインオーケストレータ (8ステージ)
+        TTSPipeline.cs             # メインオーケストレータ (8ステージ, ArrayPool, GetTrimmedLength)
         TTSRequest.cs              # リクエストstruct (StyleWeight含む)
         TTSPipelineBuilder.cs      # Builderパターン
         TTSRequestQueue.cs         # UniTask Channelベースのリクエストキュー

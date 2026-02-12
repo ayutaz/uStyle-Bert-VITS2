@@ -10,6 +10,7 @@
 - **Builder パターン** — `TTSPipelineBuilder` による簡潔なセットアップ
 - **LRU キャッシュ** — `CachedBertRunner` で同一テキストの BERT 推論を自動キャッシュ
 - **Burst 最適化** — BertAlignment と音声正規化に Burst ジョブを活用
+- **GC 圧力削減** — ArrayPool、dest バッファオーバーロード、スカラーバッファ再利用、unsafe MemCpy で推論1回あたり ~470KB の GC アロケーション削減
 
 ## Requirements
 
@@ -115,6 +116,17 @@ Windows デスクトップでの実測値:
 
 > DeBERTa (FP32) を GPUCompute で実行すると D3D12 デバイスロストが発生するため、BERT は CPU バックエンド必須です。
 
+### GC 最適化
+
+| 最適化 | 効果 |
+|--------|------|
+| BertRunner dest オーバーロード | BERT 出力バッファの再利用 (~32KB/call) |
+| SBV2ModelRunner unsafe MemCpy | BERT パディング 2.0x 高速化 |
+| SBV2ModelRunner スカラーバッファ再利用 | 6 個のスカラー配列アロケーション除去 |
+| TTSPipeline ArrayPool | bertData + alignedBert のプーリング (~250KB/call) |
+| GetTrimmedLength (in-place) | 末尾無音トリムの配列コピー除去 (~186KB/call) |
+| **合計** | **~470KB/call の GC 圧力削減** |
+
 ## ONNX 変換
 
 `scripts/` ディレクトリに Sentis 互換の ONNX を生成する変換スクリプトがあります。
@@ -157,7 +169,7 @@ Assets/uStyleBertVITS2/
       Native/            # OpenJTalk P/Invoke
       Diagnostics/       # TTSDebugLog
   Editor/                # Custom Inspector, Import Validator
-  Tests/                 # Runtime & Editor テスト (18 files)
+  Tests/                 # Runtime & Editor テスト (18 files, 145 tests)
   Plugins/               # openjtalk_wrapper.dll (Windows x86_64)
   Samples~/              # BasicTTS デモシーン
 scripts/                 # Python ONNX変換スクリプト

@@ -575,51 +575,99 @@ public class TTSManager : MonoBehaviour
 
 推論パイプラインで頻繁に `float[]` や `int[]` を確保するとGCスパイクが発生し、フレームレートが不安定になる。
 
-### 対策: ArrayPool
+### 実装済みの最適化 (A1-A4)
+
+以下の最適化により、推論1回あたり **~470KB の GC アロケーション** を削減している。
+
+| 最適化 | 対象 | 効果 |
+|--------|------|------|
+| A1: dest バッファオーバーロード | `BertRunner.Run(tokenIds, mask, dest)` | 出力配列の再利用 (~32KB/call) |
+| A2: unsafe MemCpy | `SBV2ModelRunner` BERT パディング | Array.Copy → UnsafeUtility.MemCpy (2.0x) |
+| A3: スカラーバッファ再利用 | `SBV2ModelRunner` `_scalarIntBuf`/`_scalarFloatBuf` | 6個の `new[]` 除去 (150 bytes/call) |
+| A4: ArrayPool + GetTrimmedLength | `TTSPipeline` bertData/alignedBert + 末尾無音トリム | ~436KB/call のプーリング + コピー除去 |
+
+### A1: BertRunner dest バッファオーバーロード
 
 ```csharp
-using System.Buffers;
-
-public float[] RunWithPooling(int[] tokenIds, int[] mask)
-{
-    int tokenLen = tokenIds.Length;
-    int bertSize = 1024 * tokenLen;
-
-    // ArrayPoolからレンタル（GCアロケーションを回避）
-    float[] buffer = ArrayPool<float>.Shared.Rent(bertSize);
-    try
-    {
-        // 推論実行
-        var output = _worker.PeekOutput() as Tensor<float>;
-        output.ReadbackAndClone();
-        float[] raw = output.DownloadToArray();
-
-        // 必要部分をコピー
-        Array.Copy(raw, buffer, bertSize);
-        return buffer;  // 呼び出し側がReturnする責務
-    }
-    catch
-    {
-        ArrayPool<float>.Shared.Return(buffer);
-        throw;
-    }
-}
-
-// 呼び出し側
-float[] bert = runner.RunWithPooling(tokens, mask);
+// TTSPipeline での使用パターン: ArrayPool + dest overload
+int bertLen = BertAligner.EmbeddingDimension * tokenIds.Length;
+float[] bertData = ArrayPool<float>.Shared.Rent(bertLen);
 try
 {
-    // bertデータを使用
-    float[] aligned = AlignBertToPhonemes(bert, word2ph, seqLen);
-    // ...
+    _bert.Run(tokenIds, attentionMask, bertData); // dest overload: GC alloc なし
+    // bertData を使用...
 }
 finally
 {
-    ArrayPool<float>.Shared.Return(bert);
+    ArrayPool<float>.Shared.Return(bertData);
 }
 ```
 
-**注意**: `DownloadToArray()` 自体が新規配列を確保するため、完全なGC回避にはならない。Sentis APIの制約として受け入れ、その後の処理で`ArrayPool`を活用する。
+### A2: SBV2ModelRunner unsafe パディング
+
+```csharp
+// BERT 埋め込みの [1024, seqLen] → [1024, padLen] パディング
+// Before: Array.Clear + Array.Copy ループ (1024 回の呼び出し)
+// After:  UnsafeUtility.MemClear + MemCpy (bounds check なし、2.0x 高速)
+unsafe
+{
+    fixed (float* srcPtr = jaBertEmbedding, dstPtr = _paddedJaBert)
+    {
+        UnsafeUtility.MemClear(dstPtr, (long)HiddenSize * _padLen * sizeof(float));
+        for (int h = 0; h < HiddenSize; h++)
+            UnsafeUtility.MemCpy(
+                dstPtr + h * _padLen,
+                srcPtr + h * seqLen,
+                seqLen * sizeof(float));
+    }
+}
+```
+
+### A3: スカラーバッファ再利用
+
+```csharp
+// Before: 推論ごとに 6 個の配列を確保
+using var sidTensor = new Tensor<int>(new TensorShape(1), new[] { speakerId });      // GC alloc
+using var sdpTensor = new Tensor<float>(new TensorShape(1), new[] { sdpRatio });     // GC alloc
+
+// After: フィールドに事前確保したバッファを再利用
+private readonly int[] _scalarIntBuf = new int[1];
+private readonly float[] _scalarFloatBuf = new float[1];
+
+_scalarIntBuf[0] = speakerId;
+using var sidTensor = new Tensor<int>(new TensorShape(1), _scalarIntBuf);            // 0 GC
+_scalarFloatBuf[0] = sdpRatio;
+using var sdpTensor = new Tensor<float>(new TensorShape(1), _scalarFloatBuf);        // 0 GC
+```
+
+### A4: ArrayPool + GetTrimmedLength
+
+```csharp
+// TTSPipeline: bertData と alignedBert を ArrayPool で管理
+int bertLen = BertAligner.EmbeddingDimension * tokenIds.Length;
+float[] bertData = ArrayPool<float>.Shared.Rent(bertLen);
+float[] alignedBert = null;
+try
+{
+    _bert.Run(tokenIds, attentionMask, bertData);
+    int alignedLen = BertAligner.EmbeddingDimension * phoneSeqLen;
+    alignedBert = ArrayPool<float>.Shared.Rent(alignedLen);
+    BertAligner.AlignBertToPhonemesBurst(bertData, tokenIds.Length, word2ph, phoneSeqLen, alignedBert);
+    // ... TTS 推論 ...
+
+    // 末尾無音トリム: 配列コピーせず長さのみ返す
+    int trimmedLength = GetTrimmedLength(audioSamples);
+    clip = AudioClip.Create("TTS", trimmedLength, 1, _sampleRate, false);
+    clip.SetData(audioSamples, 0); // 元の配列から直接 SetData
+}
+finally
+{
+    if (alignedBert != null) ArrayPool<float>.Shared.Return(alignedBert);
+    ArrayPool<float>.Shared.Return(bertData);
+}
+```
+
+**注意**: Sentis の `DownloadToArray()` 自体が新規配列を確保するため、完全なGC回避にはならない。Sentis APIの制約として受け入れ、その後の処理で`ArrayPool`を活用する。
 
 ---
 

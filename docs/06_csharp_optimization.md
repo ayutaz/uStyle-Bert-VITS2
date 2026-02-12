@@ -13,63 +13,50 @@ Style-Bert-VITS2 Unity実装のC#コードにおける高速化テクニック�
 
 推論パイプラインで繰り返し確保される`float[]`/`int[]`のGC圧力を削減する。
 
+**実装済みの使用箇所:**
+
+1. **TTSPipeline**: BERT 推論結果 (`bertData`) と BERT 展開結果 (`alignedBert`) を `ArrayPool` で管理
+2. **BertRunner dest overload**: 呼び出し側が事前確保したバッファに結果を書き込む
+
 ```csharp
-using System.Buffers;
-
-public class BertAligner
-{
-    /// <summary>
-    /// BERTの出力を音素列長に展開する。
-    /// 返り値は ArrayPool からレンタルされた配列。呼び出し側で Return すること。
-    /// </summary>
-    public (float[] Buffer, int Length) AlignBertToPhonemes(
-        float[] bertFlat, int tokenLen, int[] word2ph, int phoneSeqLen)
-    {
-        int embDim = 1024;
-        int requiredSize = embDim * phoneSeqLen;
-
-        // ArrayPoolからレンタル（GCアロケーション回避）
-        // 注意: Rent() は requiredSize 以上の配列を返す場合がある。
-        // Tensor作成時は requiredSize 分のみ使用するため実害はないが、
-        // 配列全体を走査する処理では Length ではなく requiredSize を上限にすること。
-        float[] aligned = ArrayPool<float>.Shared.Rent(requiredSize);
-
-        int phoneIdx = 0;
-        int tokenIdx = 0;
-        for (int w = 0; w < word2ph.Length; w++)
-        {
-            for (int p = 0; p < word2ph[w]; p++)
-            {
-                // 1024次元ベクトルをコピー
-                for (int d = 0; d < embDim; d++)
-                {
-                    aligned[d * phoneSeqLen + phoneIdx] = bertFlat[d * tokenLen + tokenIdx];
-                }
-                phoneIdx++;
-            }
-            tokenIdx++;
-        }
-
-        return (aligned, requiredSize);
-    }
-}
-
-// 使用側
-var (buffer, length) = aligner.AlignBertToPhonemes(bertData, tokenLen, word2ph, seqLen);
+// TTSPipeline での実際のパターン
+int bertLen = BertAligner.EmbeddingDimension * tokenIds.Length;
+float[] bertData = ArrayPool<float>.Shared.Rent(bertLen);
+float[] alignedBert = null;
 try
 {
-    // buffer を Tensor に変換して推論に使用
-    using var tensor = new Tensor<float>(new TensorShape(1, 1024, seqLen), buffer);
-    worker.SetInput("bert", tensor);
-    worker.Schedule();
+    _bert.Run(tokenIds, attentionMask, bertData); // dest overload
+    int alignedLen = BertAligner.EmbeddingDimension * phoneSeqLen;
+    alignedBert = ArrayPool<float>.Shared.Rent(alignedLen);
+    BertAligner.AlignBertToPhonemesBurst(
+        bertData, tokenIds.Length, word2ph, phoneSeqLen, alignedBert);
+    // ... TTS 推論 ...
 }
 finally
 {
-    ArrayPool<float>.Shared.Return(buffer);
+    if (alignedBert != null) ArrayPool<float>.Shared.Return(alignedBert);
+    ArrayPool<float>.Shared.Return(bertData);
 }
 ```
 
-**効果**: 推論呼び出しごとに ~400KB (1024 * 100 * sizeof(float)) のGCアロケーションを回避。
+**効果**: 推論呼び出しごとに ~250KB (bertData + alignedBert) のGCアロケーションを回避。
+
+### スカラーバッファ再利用
+
+`SBV2ModelRunner` では Sentis テンソル作成時のスカラー値（speakerId, sdpRatio 等）にフィールドバッファを再利用：
+
+```csharp
+private readonly int[] _scalarIntBuf = new int[1];
+private readonly float[] _scalarFloatBuf = new float[1];
+
+// 推論時: バッファの値を上書きして再利用（GC alloc 0）
+_scalarIntBuf[0] = speakerId;
+using var sidTensor = new Tensor<int>(new TensorShape(1), _scalarIntBuf);
+_scalarFloatBuf[0] = sdpRatio;
+using var sdpTensor = new Tensor<float>(new TensorShape(1), _scalarFloatBuf);
+```
+
+**効果**: 推論呼び出しごとに 6 個の小規模配列アロケーション (150 bytes) を除去。
 
 ### stackalloc — 小規模一時配列
 
@@ -711,6 +698,7 @@ public async Awaitable<AudioClip> SynthesizeAsync(TTSRequest request)
 
 ```csharp
 using Unity.Profiling;
+using System.Buffers;
 
 public class TTSPipeline
 {
@@ -729,22 +717,40 @@ public class TTSPipeline
         int[] tokens; int[] mask;
         using (s_Tokenize.Auto()) { (tokens, mask) = _tokenizer.Encode(request.Text); }
 
-        float[] bert;
-        using (s_BertInfer.Auto()) { bert = _bert.Run(tokens, mask); }
-
-        float[] aligned;
-        using (s_BertAlign.Auto())
+        // ArrayPool で BERT バッファを管理（GC 圧力削減）
+        int bertLen = 1024 * tokens.Length;
+        float[] bertData = ArrayPool<float>.Shared.Rent(bertLen);
+        float[] alignedBert = null;
+        try
         {
-            aligned = AlignBertToPhonemes(bert, tokens.Length, g2p.Word2Ph, g2p.PhonemeIds.Length);
+            using (s_BertInfer.Auto()) { _bert.Run(tokens, mask, bertData); }
+
+            int alignedLen = 1024 * phoneSeqLen;
+            alignedBert = ArrayPool<float>.Shared.Rent(alignedLen);
+            using (s_BertAlign.Auto())
+            {
+                BertAligner.AlignBertToPhonemesBurst(
+                    bertData, tokens.Length, word2ph, phoneSeqLen, alignedBert);
+            }
+
+            float[] audio;
+            using (s_TTSInfer.Auto()) { audio = _tts.Run(...); }
+
+            AudioClip clip;
+            using (s_Audio.Auto())
+            {
+                TTSAudioUtility.NormalizeSamplesBurst(audio, 0.95f);
+                int trimmedLength = GetTrimmedLength(audio); // 配列コピーなし
+                clip = AudioClip.Create("TTS", trimmedLength, 1, 44100, false);
+                clip.SetData(audio, 0);
+            }
+            return clip;
         }
-
-        float[] audio;
-        using (s_TTSInfer.Auto()) { audio = _tts.Run(g2p, aligned, request); }
-
-        AudioClip clip;
-        using (s_Audio.Auto()) { clip = TTSAudioUtility.CreateClip(audio); }
-
-        return clip;
+        finally
+        {
+            if (alignedBert != null) ArrayPool<float>.Shared.Return(alignedBert);
+            ArrayPool<float>.Shared.Return(bertData);
+        }
     }
 }
 ```

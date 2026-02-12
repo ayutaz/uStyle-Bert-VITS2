@@ -4,6 +4,17 @@ using Unity.InferenceEngine;
 namespace uStyleBertVITS2.Configuration
 {
     /// <summary>
+    /// BERT推論エンジンの選択。
+    /// </summary>
+    public enum BertEngine
+    {
+        /// <summary>Unity Sentis (AI Inference Engine) を使用。</summary>
+        Sentis = 0,
+        /// <summary>ONNX Runtime + DirectML を使用。</summary>
+        OnnxRuntime = 1,
+    }
+
+    /// <summary>
     /// Style-Bert-VITS2 TTS設定。ScriptableObjectとしてInspectorから設定可能。
     /// </summary>
     [CreateAssetMenu(fileName = "TTSSettings", menuName = "uStyleBertVITS2/TTS Settings")]
@@ -17,11 +28,24 @@ namespace uStyleBertVITS2.Configuration
         public ModelAsset TTSModel;
 
         [Header("Backend")]
-        [Tooltip("BERT推論バックエンド (DeBERTaが大きいためCPU推奨)")]
+        [Tooltip("BERT推論エンジン (Sentis=従来, OnnxRuntime=DirectML GPU推論)")]
+        public BertEngine BertEngineType = BertEngine.Sentis;
+
+        [Tooltip("BERT推論バックエンド — Sentis使用時 (DeBERTaが大きいためCPU推奨)")]
         public BackendType BertBackend = BackendType.CPU;
 
         [Tooltip("TTS推論バックエンド (GPUCompute推奨)")]
         public BackendType TTSBackend = BackendType.GPUCompute;
+
+        [Header("ONNX Runtime Settings")]
+        [Tooltip("ORT用BERTモデルパス (StreamingAssets相対)")]
+        public string OrtBertModelPath = "uStyleBertVITS2/Models/deberta_for_ort.onnx";
+
+        [Tooltip("DirectML (GPU) を使用する")]
+        public bool UseDirectML = true;
+
+        [Tooltip("DirectML デバイスID (0=デフォルトGPU)")]
+        public int DirectMLDeviceId = 0;
 
         [Header("Default Parameters")]
         [Range(0f, 1f)]

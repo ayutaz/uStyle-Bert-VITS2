@@ -7,17 +7,20 @@ namespace uStyleBertVITS2.Inference
     /// LRUキャッシュ付きBERT推論ラッパー。
     /// 同一テキストの重複推論を回避する。
     /// </summary>
-    public class CachedBertRunner : IDisposable
+    public class CachedBertRunner : IBertRunner
     {
-        private readonly BertRunner _runner;
+        private readonly IBertRunner _runner;
         private readonly LRUCache<string, float[]> _cache;
         private bool _disposed;
 
-        public CachedBertRunner(BertRunner runner, int capacity = 64)
+        public CachedBertRunner(IBertRunner runner, int capacity = 64)
         {
             _runner = runner ?? throw new ArgumentNullException(nameof(runner));
             _cache = new LRUCache<string, float[]>(capacity);
         }
+
+        /// <inheritdoc/>
+        public int HiddenSize => _runner.HiddenSize;
 
         /// <summary>
         /// BERT推論を実行する。キャッシュヒット時は推論をスキップ。
@@ -36,6 +39,22 @@ namespace uStyleBertVITS2.Inference
             float[] result = _runner.Run(tokenIds, attentionMask);
             _cache.Put(text, result);
             return result;
+        }
+
+        /// <inheritdoc/>
+        public void Run(int[] tokenIds, int[] attentionMask, float[] dest)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CachedBertRunner));
+            _runner.Run(tokenIds, attentionMask, dest);
+        }
+
+        /// <inheritdoc/>
+        public float[] Run(int[] tokenIds, int[] attentionMask)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(CachedBertRunner));
+            return _runner.Run(tokenIds, attentionMask);
         }
 
         /// <summary>

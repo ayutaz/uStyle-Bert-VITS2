@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using UnityEngine;
 using uStyleBertVITS2.Configuration;
@@ -15,7 +16,7 @@ namespace uStyleBertVITS2.Services
     {
         private IG2P _g2p;
         private SBV2Tokenizer _tokenizer;
-        private BertRunner _bertRunner;
+        private IBertRunner _bertRunner;
         private SBV2ModelRunner _ttsRunner;
         private StyleVectorProvider _styleProvider;
         private TTSSettings _settings;
@@ -38,7 +39,7 @@ namespace uStyleBertVITS2.Services
             return this;
         }
 
-        public TTSPipelineBuilder WithBertRunner(BertRunner bertRunner)
+        public TTSPipelineBuilder WithBertRunner(IBertRunner bertRunner)
         {
             _bertRunner = bertRunner;
             return this;
@@ -72,7 +73,25 @@ namespace uStyleBertVITS2.Services
             _tokenizer ??= new SBV2Tokenizer(
                 Path.Combine(Application.streamingAssetsPath, _settings.VocabPath));
 
-            _bertRunner ??= new BertRunner(_settings.BertModel, _settings.BertBackend);
+            if (_bertRunner == null)
+            {
+                switch (_settings.BertEngineType)
+                {
+                    case BertEngine.Sentis:
+                        _bertRunner = new BertRunner(_settings.BertModel, _settings.BertBackend);
+                        break;
+                    case BertEngine.OnnxRuntime:
+#if USBV2_ORT_AVAILABLE
+                        var ortPath = Path.Combine(Application.streamingAssetsPath, _settings.OrtBertModelPath);
+                        _bertRunner = new OnnxRuntimeBertRunner(ortPath, _settings.UseDirectML, _settings.DirectMLDeviceId);
+                        break;
+#else
+                        throw new InvalidOperationException(
+                            "BertEngine.OnnxRuntime is selected but ONNX Runtime is not available. " +
+                            "Install com.github.asus4.onnxruntime package.");
+#endif
+                }
+            }
 
             _ttsRunner ??= new SBV2ModelRunner(_settings.TTSModel, _settings.TTSBackend);
 

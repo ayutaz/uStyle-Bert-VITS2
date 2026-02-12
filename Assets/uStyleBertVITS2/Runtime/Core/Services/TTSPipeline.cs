@@ -26,7 +26,7 @@ namespace uStyleBertVITS2.Services
 
         private readonly IG2P _g2p;
         private readonly SBV2Tokenizer _tokenizer;
-        private readonly BertRunner _bert;
+        private readonly IBertRunner _bert;
         private readonly SBV2ModelRunner _tts;
         private readonly StyleVectorProvider _styleProvider;
         private readonly int _sampleRate;
@@ -37,7 +37,7 @@ namespace uStyleBertVITS2.Services
         public TTSPipeline(
             IG2P g2p,
             SBV2Tokenizer tokenizer,
-            BertRunner bert,
+            IBertRunner bert,
             SBV2ModelRunner tts,
             StyleVectorProvider styleProvider,
             int sampleRate = 44100,

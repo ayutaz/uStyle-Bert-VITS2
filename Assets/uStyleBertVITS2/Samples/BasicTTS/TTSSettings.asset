@@ -14,8 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: uStyleBertVITS2.Runtime::uStyleBertVITS2.Configuration.TTSSettings
   BertModel: {fileID: 5022602860645237092, guid: dba6aba8506f96745aebde4bcf089922, type: 3}
   TTSModel: {fileID: 5022602860645237092, guid: e0b77e76d0f7b194fa9da38700f7ff08, type: 3}
+  BertEngineType: 1
   BertBackend: 512
   TTSBackend: 256
+  OrtBertModelPath: uStyleBertVITS2/Models/deberta_for_ort.onnx
+  UseDirectML: 1
+  DirectMLDeviceId: 0
   DefaultSdpRatio: 0.2
   DefaultNoiseScale: 0.6
   DefaultNoiseScaleW: 0.8

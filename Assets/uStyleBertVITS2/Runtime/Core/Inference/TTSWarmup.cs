@@ -14,7 +14,7 @@ namespace uStyleBertVITS2.Inference
         /// ダミーデータで推論パイプラインを事前ウォームアップする。
         /// ロード画面やスプラッシュ画面中に実行すること。
         /// </summary>
-        public static IEnumerator WarmupAll(BertRunner bert, SBV2ModelRunner tts)
+        public static IEnumerator WarmupAll(IBertRunner bert, SBV2ModelRunner tts)
         {
             // BERT ウォームアップ（最小入力: [CLS] x [SEP]）
             int[] dummyTokens = { 1, 100, 2 };

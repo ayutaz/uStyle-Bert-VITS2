@@ -12,9 +12,11 @@ namespace uStyleBertVITS2.Inference
     /// 出力は実際のトークン長にトリムして返す。
     /// padLen はモデルの入力 shape から自動取得する。
     /// </summary>
-    public class BertRunner : IDisposable
+    public class BertRunner : IBertRunner
     {
-        private const int HiddenSize = 1024;
+        private const int HiddenDim = 1024;
+
+        int IBertRunner.HiddenSize => HiddenDim;
 
         private Worker _worker;
         private readonly int _padLen;
@@ -64,7 +66,7 @@ namespace uStyleBertVITS2.Inference
                     $"Token length {tokenLen} exceeds model capacity {_padLen}. " +
                     "Re-export the ONNX model with a larger seq_len.");
 
-            int requiredLen = HiddenSize * tokenLen;
+            int requiredLen = HiddenDim * tokenLen;
             if (dest.Length < requiredLen)
                 throw new ArgumentException(
                     $"dest buffer too small: {dest.Length} < {requiredLen}.", nameof(dest));
@@ -97,7 +99,7 @@ namespace uStyleBertVITS2.Inference
             {
                 fixed (float* srcPtr = fullOutput, dstPtr = dest)
                 {
-                    for (int h = 0; h < HiddenSize; h++)
+                    for (int h = 0; h < HiddenDim; h++)
                         UnsafeUtility.MemCpy(
                             dstPtr + h * tokenLen,
                             srcPtr + h * _padLen,
@@ -115,7 +117,7 @@ namespace uStyleBertVITS2.Inference
         /// <returns>BERT埋め込み [1, 1024, token_len] を flatten した float[]</returns>
         public float[] Run(int[] tokenIds, int[] attentionMask)
         {
-            float[] result = new float[HiddenSize * tokenIds.Length];
+            float[] result = new float[HiddenDim * tokenIds.Length];
             Run(tokenIds, attentionMask, result);
             return result;
         }

@@ -84,8 +84,11 @@ monolithic方式（1ファイル）でエクスポート。6つのサブモジ�
 
 | 設定 | デフォルト | 説明 |
 |---|---|---|
-| `BertBackend` | `CPU` | DeBERTa 推論。**CPU 必須**（FP32 GPU → D3D12 デバイスロスト） |
+| `BertEngineType` | `Sentis` | BERT推論エンジン (`Sentis` / `OnnxRuntime`) |
+| `BertBackend` | `CPU` | Sentis使用時のバックエンド。**CPU 必須**（FP32 GPU → D3D12 デバイスロスト） |
 | `TTSBackend` | `GPUCompute` | SynthesizerTrn 推論。GPU 推奨 |
+| `UseDirectML` | `true` | ORT使用時にDirectML (GPU) を有効化 |
+| `DirectMLDeviceId` | `0` | DirectML デバイスID (0=デフォルトGPU) |
 
 ### 実測パフォーマンス (Windows デスクトップ)
 
@@ -94,6 +97,14 @@ monolithic方式（1ファイル）でエクスポート。6つのサブモジ�
 | BERT=CPU + TTS=CPU | ~753ms |
 | BERT=CPU + TTS=GPU (初回) | ~969ms |
 | BERT=CPU + TTS=GPU (2回目以降) | ~621ms |
+
+### BERT バックエンド別ベンチマーク (RTX 4070 Ti SUPER, Editor)
+
+| 入力サイズ | Sentis CPU | ORT DirectML | ORT CPU | DirectML スピードアップ |
+|---|---|---|---|---|
+| 5 tokens | ~965 ms | ~66 ms | ~440 ms | 14.6x |
+| 20 tokens | ~829 ms | ~285 ms | ~468 ms | 2.9x |
+| 40 tokens | ~898 ms | ~266 ms | ~461 ms | 3.4x |
 
 ## ONNX変換
 
@@ -140,7 +151,9 @@ float[] data = output.DownloadToArray();
 - **OpenJTalk P/Invoke**: uPiper の `openjtalk_wrapper.dll` を流用。`JapaneseG2P` クラスが OpenJTalk → SBV2PhonemeMapper → PhonemeCharacterAligner を統合
 
 ### BERT埋め込み
-- **ランタイム DeBERTa 推論**: `BertRunner` が padLen 自動検出・パディング・トリム処理を実行。`CachedBertRunner` で LRU キャッシュによる重複推論回避
+- **IBertRunner インターフェース**: `BertRunner` (Sentis) と `OnnxRuntimeBertRunner` (ORT+DirectML) を統一的に扱う
+- **BertRunner (Sentis)**: padLen 自動検出・パディング・トリム処理。`CachedBertRunner` で LRU キャッシュによる重複推論回避
+- **OnnxRuntimeBertRunner (ORT)**: DirectML (GPU) 優先で `EntryPointNotFoundException` 時は CPU にフォールバック。動的シェイプをネイティブサポートしパディング不要
 - **dest バッファオーバーロード**: `Run(tokenIds, mask, dest)` で事前確保バッファに書き込み、GC アロケーション回避。出力トリムは `UnsafeUtility.MemCpy` で高速化
 - `token_type_ids` は不要（onnxsim で定数化済み）
 
@@ -156,10 +169,13 @@ Assets/uStyleBertVITS2/
   Runtime/
     Core/
       Inference/
-        BertRunner.cs              # DeBERTa推論（padLen自動検出・パディング・dest overload・unsafe MemCpy）
+        IBertRunner.cs             # BERT推論インターフェース
+        BertRunner.cs              # Sentis DeBERTa推論（padLen自動検出・パディング・dest overload・unsafe MemCpy）
+        OnnxRuntimeBertRunner.cs   # ORT+DirectML DeBERTa推論（動的シェイプ・DirectMLフォールバック）
         SBV2ModelRunner.cs         # TTS推論（JP-Extra自動判定・unsafe パディング・スカラーバッファ再利用）
         ModelAssetManager.cs       # モデルロード・ライフサイクル管理
         CachedBertRunner.cs        # LRUキャッシュ付きBERT推論
+        BertBenchmark.cs           # BERTバックエンド別ベンチマーク
         TTSWarmup.cs               # シェーダコンパイル事前ウォームアップ
       TextProcessing/
         IG2P.cs                    # G2Pインターフェース
@@ -200,6 +216,7 @@ Assets/uStyleBertVITS2/
   Editor/
     TTSSettingsEditor.cs           # カスタムInspector
     ModelImportValidator.cs        # ONNXインポート検証
+    OrtDirectMLPostProcessBuild.cs # ビルド後DirectML.dllコピー
     uStyleBertVITS2.Editor.asmdef
   Tests/
     Runtime/                       # G2P, Tokenizer, Aligner, Audio, Cache, Async等
@@ -209,6 +226,9 @@ Assets/uStyleBertVITS2/
   Plugins/
     Windows/x86_64/
       openjtalk_wrapper.dll
+      onnxruntime.dll              # DirectML対応版 (NuGet Microsoft.ML.OnnxRuntime.DirectML)
+      onnxruntime_providers_shared.dll
+      DirectML.dll                 # DirectMLランタイム (NuGet Microsoft.AI.DirectML)
   Samples~/
     BasicTTS/
       SBV2TTSDemo.cs

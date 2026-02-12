@@ -20,8 +20,23 @@ namespace uStyleBertVITS2.Editor
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Validation", EditorStyles.boldLabel);
 
-            // モデルアセット検証
-            ValidateModelAsset("BERT Model", settings.BertModel);
+            // BERT エンジン別バリデーション
+            if (settings.BertEngineType == BertEngine.Sentis)
+            {
+                ValidateModelAsset("BERT Model (Sentis)", settings.BertModel);
+            }
+            else if (settings.BertEngineType == BertEngine.OnnxRuntime)
+            {
+#if !USBV2_ORT_AVAILABLE
+                EditorGUILayout.HelpBox(
+                    "ONNX Runtime package (com.github.asus4.onnxruntime) is not installed.\n" +
+                    "BertEngine.OnnxRuntime will throw at runtime.",
+                    MessageType.Error);
+#endif
+                ValidatePath("ORT BERT Model", settings.OrtBertModelPath);
+            }
+
+            // TTS モデル検証
             ValidateModelAsset("TTS Model", settings.TTSModel);
 
             // パス検証

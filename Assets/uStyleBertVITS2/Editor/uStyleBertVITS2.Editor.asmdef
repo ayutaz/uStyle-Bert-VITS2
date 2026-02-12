@@ -14,6 +14,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.github.asus4.onnxruntime",
+            "expression": "0.4.0",
+            "define": "USBV2_ORT_AVAILABLE"
+        }
+    ],
     "noEngineReferences": false
 }

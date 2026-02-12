@@ -78,6 +78,16 @@ def main():
         action="store_true",
         help="Export with fixed sequence length (no dynamic axes)",
     )
+    parser.add_argument(
+        "--no-int32",
+        action="store_true",
+        help="Skip int64→int32 conversion (for ONNX Runtime which supports int64 natively)",
+    )
+    parser.add_argument(
+        "--no-simplify",
+        action="store_true",
+        help="Skip onnxsim simplification",
+    )
     args = parser.parse_args()
 
     print(f"Loading model: {args.model_name}")
@@ -121,11 +131,17 @@ def main():
     print("Loading exported ONNX...")
     model = onnx.load(temp_path)
 
-    print("Simplifying...")
-    model, check = simplify(model)
+    if not args.no_simplify:
+        print("Simplifying...")
+        model, check = simplify(model)
+    else:
+        print("Skipping simplification")
 
-    print("Converting int64 → int32...")
-    model = convert_int64_to_int32(model)
+    if not args.no_int32:
+        print("Converting int64 → int32...")
+        model = convert_int64_to_int32(model)
+    else:
+        print("Skipping int64 → int32 conversion (ORT mode)")
 
     if not args.no_fp16:
         print("Converting to FP16...")
@@ -136,6 +152,30 @@ def main():
             model = float16.convert_float_to_float16(
                 model, keep_io_types=True, check_fp16_ready=False
             )
+
+    # 出力が FP16 の場合、FP32 にキャストするノードを追加 (ORT 互換)
+    output_type = model.graph.output[0].type.tensor_type.elem_type
+    if output_type == onnx.TensorProto.FLOAT16:
+        print("Output is FP16 -- appending Cast to FP32...")
+        old_output = model.graph.output[0]
+        old_name = old_output.name
+        intermediate_name = old_name + "_fp16"
+
+        # 既存の出力ノードを中間名にリネーム
+        for node in model.graph.node:
+            for i, out in enumerate(node.output):
+                if out == old_name:
+                    node.output[i] = intermediate_name
+
+        # Cast ノード追加
+        cast_node = onnx.helper.make_node(
+            "Cast", inputs=[intermediate_name], outputs=[old_name],
+            to=onnx.TensorProto.FLOAT,
+        )
+        model.graph.node.append(cast_node)
+
+        # 出力の型を FP32 に更新
+        old_output.type.tensor_type.elem_type = onnx.TensorProto.FLOAT
 
     output_path = Path(args.output)
     print(f"Saving to: {output_path}")

@@ -7,6 +7,13 @@
       "dependencies": {},
       "hash": "7c0f199fe0d3fc528024488ccd671e6c7b27745b"
     },
+    "com.github.asus4.onnxruntime": {
+      "version": "0.4.4",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://registry.npmjs.com"
+    },
     "com.unity.ai.inference": {
       "version": "2.5.0",
       "depth": 0,

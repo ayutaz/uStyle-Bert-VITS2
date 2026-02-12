@@ -1,16 +1,45 @@
 # uStyle-Bert-VITS2
 
-[Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) の日本語音声合成モデルを Unity 上でリアルタイム推論するライブラリです。ONNX に変換したモデルを [Unity Sentis (AI Inference Engine)](https://docs.unity3d.com/Packages/com.unity.ai.inference@2.5/manual/index.html) で実行します。
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Unity](https://img.shields.io/badge/Unity-6000.3+-black.svg)](https://unity.com/)
+
+[English](README_EN.md)
+
+[Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) の日本語音声合成モデルを Unity 上でリアルタイム推論するライブラリです。ONNX に変換したモデルを [Unity Sentis (AI Inference Engine)](https://docs.unity3d.com/Packages/com.unity.ai.inference@2.5/manual/index.html) または [ONNX Runtime + DirectML](https://github.com/asus4/onnxruntime-unity) で実行します。
+
+## Table of Contents
+
+- [Demo](#demo)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Performance](#performance)
+- [ONNX 変換](#onnx-変換)
+- [Project Structure](#project-structure)
+- [Limitations](#limitations)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [Acknowledgements](#acknowledgements)
+- [License](#license)
+
+## Demo
+
+<!-- デモ動画をここに追加予定 -->
 
 ## Features
 
 - **完全な C# 実装** — G2P (OpenJTalk P/Invoke) からDeBERTa推論、TTS合成まで Unity 内で完結
 - **非同期パイプライン** — UniTask ベースの `SynthesizeAsync` でメインスレッドをブロックしない音声合成
 - **GPU 推論** — SynthesizerTrn は GPUCompute バックエンドで高速推論（~621ms）
+- **BERT GPU 推論 (ORT+DirectML)** — ONNX Runtime + DirectML で BERT 推論を最大 14.6x 高速化（`IBertRunner` によるマルチバックエンド対応）
 - **Builder パターン** — `TTSPipelineBuilder` による簡潔なセットアップ
 - **LRU キャッシュ** — `CachedBertRunner` で同一テキストの BERT 推論を自動キャッシュ
 - **Burst 最適化** — BertAlignment と音声正規化に Burst ジョブを活用
 - **GC 圧力削減** — ArrayPool、dest バッファオーバーロード、スカラーバッファ再利用、unsafe MemCpy で推論1回あたり ~470KB の GC アロケーション削減
+- **ベンチマークツール** — `BertBenchmark` で BERT バックエンド別の性能比較
 
 ## Requirements
 
@@ -18,15 +47,26 @@
 - **Unity AI Inference (Sentis)** 2.5.0
 - **UniTask** 2.5.10+
 - **ZString** 2.6.0+
+- **ONNX Runtime (asus4)** 0.4.4+（optional — ORT+DirectML BERT 推論を使用する場合）
 - **Platform** Windows x86_64（OpenJTalk ネイティブプラグイン）
 
 ## Installation
 
-### 1. Unity プロジェクトを開く
+### UPM (git URL)
 
-Unity Hub から Unity 6 (6000.3.6f1+) でプロジェクトを開きます。依存パッケージ（Sentis, UniTask, ZString）は `manifest.json` で自動解決されます。
+Unity Package Manager から git URL でインストールできます。`Packages/manifest.json` に以下を追加してください:
 
-### 2. モデルファイルを配置
+```json
+{
+  "dependencies": {
+    "com.ustyle.bert-vits2": "https://github.com/<owner>/uStyle-Bert-VITS2.git?path=Assets/uStyleBertVITS2"
+  }
+}
+```
+
+> **Note**: 依存パッケージ（Sentis, UniTask, ZString, ONNX Runtime）は別途インストールが必要です。
+
+### モデルファイルを配置
 
 以下のファイルを `Assets/StreamingAssets/uStyleBertVITS2/` に配置してください:
 
@@ -34,7 +74,8 @@ Unity Hub から Unity 6 (6000.3.6f1+) でプロジェクトを開きます。�
 StreamingAssets/uStyleBertVITS2/
   Models/
     sbv2_model.onnx          # SynthesizerTrn (FP16推奨)
-    deberta_model.onnx        # DeBERTa (FP32必須)
+    deberta_model.onnx        # DeBERTa for Sentis (FP32, int32)
+    deberta_for_ort.onnx      # DeBERTa for ORT (FP32, int64) ※ORT使用時のみ
   StyleVectors/
     style_vectors.npy         # スタイルベクトル
   OpenJTalkDic/               # NAIST JDIC辞書 (8ファイル)
@@ -44,9 +85,17 @@ StreamingAssets/uStyleBertVITS2/
     vocab.json                # DeBERTa語彙ファイル
 ```
 
-> モデルファイルはサイズが大きいため Git 管理外です。ONNX 変換方法は後述の [ONNX 変換](#onnx-変換) を参照してください。
+> モデルファイルは `scripts/convert_sbv2_for_sentis.py` で HuggingFace から変換・取得できます。
+> 詳細は [ONNX 変換](#onnx-変換) を参照してください。
+>
+> ```bash
+> cd scripts && uv sync
+> uv run convert_sbv2_for_sentis.py --repo-id <hf-repo-id> --no-fp16 --no-simplify
+> ```
+>
+> ORT 用の `deberta_for_ort.onnx` は Sentis 用とは別の変換が必要です（int64 維持、FP32 出力 Cast 追加）。
 
-### 3. TTSSettings を作成
+### TTSSettings を作成
 
 `Assets > Create > uStyleBertVITS2 > TTS Settings` から ScriptableObject を作成し、モデルアセットの参照を設定します。
 
@@ -70,6 +119,7 @@ var request = new TTSRequest(
     lengthScale: 1.0f);
 
 // 非同期合成
+// TTSSettings で BertEngineType を OnnxRuntime に切り替えると ORT+DirectML で BERT 推論
 AudioClip clip = await pipeline.SynthesizeAsync(request, cancellationToken);
 
 // 再生
@@ -82,6 +132,20 @@ pipeline.Dispose();
 
 サンプルシーンは `Assets/uStyleBertVITS2/Samples~/BasicTTS/` にあります。Package Manager の Samples からインポートできます。
 
+## Configuration
+
+`TTSSettings` ScriptableObject で BERT と TTS のバックエンドを個別に設定できます:
+
+| 設定 | デフォルト | 説明 |
+|---|---|---|
+| `BertEngineType` | `Sentis` | BERT 推論エンジン (`Sentis` / `OnnxRuntime`) |
+| `BertBackend` | `CPU` | Sentis 使用時のバックエンド。**CPU 必須**（FP32 GPU → D3D12 デバイスロスト） |
+| `TTSBackend` | `GPUCompute` | SynthesizerTrn 推論。GPU 推奨 |
+| `UseDirectML` | `true` | ORT 使用時に DirectML (GPU) を有効化 |
+| `DirectMLDeviceId` | `0` | DirectML デバイス ID (0=デフォルト GPU) |
+
+> **推奨構成**: BERT=ORT DirectML + TTS=GPUCompute で最速の推論が可能です。ORT が利用できない環境では BERT=Sentis CPU + TTS=GPUCompute にフォールバックします。
+
 ## Architecture
 
 8 ステージの推論パイプライン:
@@ -89,8 +153,11 @@ pipeline.Dispose();
 ```
 Text ─→ [G2P] ─→ [add_blank] ─→ [Tokenize] ─→ [BERT] ─→ [Alignment] ─→ [StyleVector] ─→ [TTS] ─→ AudioClip
          │           │               │             │           │               │              │
-    OpenJTalk   PhonemeUtils    SBV2Tokenizer  BertRunner  BertAligner  StyleVectorProvider  SBV2ModelRunner
-    P/Invoke    Intersperse     (DeBERTa)      (Sentis)    word2ph展開   npy lookup          (Sentis)
+    OpenJTalk   PhonemeUtils    SBV2Tokenizer  IBertRunner BertAligner  StyleVectorProvider  SBV2ModelRunner
+    P/Invoke    Intersperse     (DeBERTa)      ├BertRunner  word2ph展開  npy lookup          (Sentis)
+                                               │ (Sentis CPU)
+                                               └OnnxRuntimeBertRunner
+                                                 (ORT+DirectML)
 ```
 
 | Stage | Description | Thread |
@@ -98,7 +165,7 @@ Text ─→ [G2P] ─→ [add_blank] ─→ [Tokenize] ─→ [BERT] ─→ [Ali
 | G2P | 日本語テキスト → 音素ID + トーン + word2ph | ThreadPool |
 | add_blank | blank(0) トークン挿入 (N → 2N+1) | ThreadPool |
 | Tokenize | DeBERTa 文字トークナイズ | ThreadPool |
-| BERT | DeBERTa 推論 → 1024次元埋め込み | Main (CPU) |
+| BERT | DeBERTa 推論 → 1024次元埋め込み | Main (Sentis CPU) or DirectML (ORT GPU) |
 | Alignment | word2ph で BERT 出力を音素列長に展開 | ThreadPool |
 | StyleVector | style_vectors.npy からルックアップ | ThreadPool |
 | TTS | SynthesizerTrn 推論 → 音声波形 | Main (GPU) |
@@ -114,18 +181,21 @@ Windows デスクトップでの実測値:
 | BERT=CPU + TTS=GPU (initial) | ~969ms |
 | BERT=CPU + TTS=GPU (cached) | ~621ms |
 
-> DeBERTa (FP32) を GPUCompute で実行すると D3D12 デバイスロストが発生するため、BERT は CPU バックエンド必須です。
+> Sentis で DeBERTa (FP32) を GPUCompute で実行すると D3D12 デバイスロストが発生するため、Sentis 使用時は CPU バックエンド必須です。ORT+DirectML を使用すると GPU 推論が可能になります。
+
+### BERT バックエンド別ベンチマーク
+
+RTX 4070 Ti SUPER, Editor での実測値:
+
+| Input Size | Sentis CPU | ORT DirectML | ORT CPU | DirectML Speedup |
+|---|---|---|---|---|
+| 5 tokens | ~965 ms | ~66 ms | ~440 ms | 14.6x |
+| 20 tokens | ~829 ms | ~285 ms | ~468 ms | 2.9x |
+| 40 tokens | ~898 ms | ~266 ms | ~461 ms | 3.4x |
 
 ### GC 最適化
 
-| 最適化 | 効果 |
-|--------|------|
-| BertRunner dest オーバーロード | BERT 出力バッファの再利用 (~32KB/call) |
-| SBV2ModelRunner unsafe MemCpy | BERT パディング 2.0x 高速化 |
-| SBV2ModelRunner スカラーバッファ再利用 | 6 個のスカラー配列アロケーション除去 |
-| TTSPipeline ArrayPool | bertData + alignedBert のプーリング (~250KB/call) |
-| GetTrimmedLength (in-place) | 末尾無音トリムの配列コピー除去 (~186KB/call) |
-| **合計** | **~470KB/call の GC 圧力削減** |
+推論1回あたり ~470KB の GC アロケーション削減を実現しています。詳細は [Performance Optimization](docs/05_performance_optimization.md) を参照。
 
 ## ONNX 変換
 
@@ -147,12 +217,7 @@ uv run convert_bert_for_sentis.py <deberta_path>    # DeBERTa
 uv run validate_onnx.py <onnx_path>
 ```
 
-### 変換の注意点
-
-- **opset 15** — Sentis は opset 7-15 をサポート
-- **SBV2 は FP16 推奨** — メモリ半減、品質劣化なし
-- **DeBERTa は FP32 必須** — Sentis 2.5.0 は FP16 定数テンソルをインポート不可
-- **int64 → int32 変換** — Sentis は int32 のみ対応。変換スクリプトが自動処理
+> 変換の詳細・注意点は [ONNX Export Guide](docs/01_onnx_export.md) を参照してください。
 
 ## Project Structure
 
@@ -160,7 +225,7 @@ uv run validate_onnx.py <onnx_path>
 Assets/uStyleBertVITS2/
   Runtime/
     Core/
-      Inference/         # BertRunner, SBV2ModelRunner, CachedBertRunner
+      Inference/         # IBertRunner, BertRunner, OnnxRuntimeBertRunner, SBV2ModelRunner, CachedBertRunner, BertBenchmark
       TextProcessing/    # JapaneseG2P, SBV2Tokenizer, BertAligner, PhonemeUtils
       Audio/             # AudioClip生成, Burst正規化ジョブ
       Configuration/     # TTSSettings (ScriptableObject)
@@ -168,28 +233,40 @@ Assets/uStyleBertVITS2/
       Data/              # NpyReader, StyleVectorProvider, LRUCache
       Native/            # OpenJTalk P/Invoke
       Diagnostics/       # TTSDebugLog
-  Editor/                # Custom Inspector, Import Validator
-  Tests/                 # Runtime & Editor テスト (18 files, 145 tests)
-  Plugins/               # openjtalk_wrapper.dll (Windows x86_64)
+  Editor/                # Custom Inspector, Import Validator, OrtDirectMLPostProcessBuild
+  Tests/                 # Runtime & Editor テスト (21 files, 159+ tests)
+  Plugins/               # openjtalk_wrapper.dll, onnxruntime.dll (DirectML), DirectML.dll (Windows x86_64)
   Samples~/              # BasicTTS デモシーン
 scripts/                 # Python ONNX変換スクリプト
-docs/                    # 詳細な設計ドキュメント (8 files)
+docs/                    # 詳細な設計ドキュメント
 ```
 
-## Documentation
+`docs/` ディレクトリに実装ロードマップ、ONNX エクスポート仕様、アーキテクチャ設計などの[詳細なドキュメント](docs/)があります。
 
-`docs/` ディレクトリに詳細なドキュメントがあります:
+## Limitations
 
-| File | Description |
-|---|---|
-| [00_implementation_roadmap.md](docs/00_implementation_roadmap.md) | 実装ロードマップと進捗 |
-| [01_onnx_export.md](docs/01_onnx_export.md) | ONNX エクスポート仕様 |
-| [02_g2p_implementation.md](docs/02_g2p_implementation.md) | G2P 実装詳細 |
-| [03_unity_sentis_integration.md](docs/03_unity_sentis_integration.md) | Sentis 統合ガイド |
-| [04_architecture_design.md](docs/04_architecture_design.md) | アーキテクチャ設計 |
-| [05_performance_optimization.md](docs/05_performance_optimization.md) | パフォーマンス最適化 |
-| [06_csharp_optimization.md](docs/06_csharp_optimization.md) | C# 最適化テクニック |
-| [07_cysharp_libraries.md](docs/07_cysharp_libraries.md) | Cysharp ライブラリ活用 |
+- **Windows x86_64 のみ** — OpenJTalk ネイティブプラグイン依存（macOS / Linux 非対応）
+- **日本語音声合成のみ** — JP-Extra モデルを使用
+- **Sentis BERT は CPU 必須** — DeBERTa FP32 を GPUCompute で実行すると D3D12 デバイスロスト（ORT+DirectML で GPU 推論可能）
+- **Sentis 2.5.0 の FP16 制約** — DeBERTa の FP16 量子化非対応
+
+## Troubleshooting
+
+### D3D12 Device Lost エラー
+`TTSSettings > BertBackend` を `CPU` に設定するか、`BertEngineType` を `OnnxRuntime` に切り替えてください。
+
+### EntryPointNotFoundException (DirectML)
+`Plugins/Windows/x86_64/` に `onnxruntime.dll` (DirectML 版)、`onnxruntime_providers_shared.dll`、`DirectML.dll` が配置されているか確認してください。未配置の場合、ORT は自動的に CPU にフォールバックします。
+
+### モデルロード失敗
+`Assets/StreamingAssets/uStyleBertVITS2/Models/` にモデルファイルが正しく配置されているか確認してください。
+
+### OpenJTalk P/Invoke エラー
+Windows x86_64 環境で実行しているか確認してください。macOS / Linux では動作しません。
+
+## Contributing
+
+Issue や Pull Request を歓迎します。バグ報告・機能リクエストは [GitHub Issues](https://github.com/<owner>/uStyle-Bert-VITS2/issues) にお願いします。
 
 ## Acknowledgements
 
@@ -200,7 +277,12 @@ docs/                    # 詳細な設計ドキュメント (8 files)
 - [UniTask](https://github.com/Cysharp/UniTask) — Unity 向け非同期ライブラリ
 - [ZString](https://github.com/Cysharp/ZString) — ゼロアロケーション文字列フォーマット
 - [Unity Sentis](https://docs.unity3d.com/Packages/com.unity.ai.inference@2.5/manual/index.html) — AI 推論エンジン
+- [ONNX Runtime](https://onnxruntime.ai/) — クロスプラットフォーム ML 推論エンジン
+- [onnxruntime-unity (asus4)](https://github.com/asus4/onnxruntime-unity) — ONNX Runtime Unity プラグイン
+- [DirectML](https://github.com/microsoft/DirectML) — Windows GPU アクセラレーション
 
 ## License
 
-This project is for personal/research use. The original [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) model and weights are subject to their respective licenses.
+Apache License 2.0 — 詳細は [LICENSE](LICENSE) を参照してください。
+
+モデルの重みは元の [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) ライセンスに従います。

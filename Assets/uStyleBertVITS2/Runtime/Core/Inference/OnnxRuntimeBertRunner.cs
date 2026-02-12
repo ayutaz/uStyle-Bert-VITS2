@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.ML.OnnxRuntime;
+using UnityEngine;
 
 namespace uStyleBertVITS2.Inference
 {
@@ -19,12 +20,9 @@ namespace uStyleBertVITS2.Inference
 
         public int HiddenSize => HiddenDim;
 
-        /// <summary>
-        /// OnnxRuntimeBertRunner を生成する。
-        /// </summary>
-        /// <param name="modelPath">ONNX モデルファイルの絶対パス</param>
-        /// <param name="useDirectML">DirectML (GPU) を使用するか</param>
-        /// <param name="deviceId">DirectML デバイスID (0=デフォルトGPU)</param>
+        /// <summary>DirectML が実際に有効化されたかどうか。</summary>
+        public bool IsDirectMLActive { get; private set; }
+
         public OnnxRuntimeBertRunner(string modelPath, bool useDirectML = true, int deviceId = 0)
         {
             var options = new SessionOptions();
@@ -32,9 +30,21 @@ namespace uStyleBertVITS2.Inference
 
             if (useDirectML)
             {
-                // DirectML は EnableMemoryPattern = false が必須
-                options.EnableMemoryPattern = false;
-                options.AppendExecutionProvider_DML(deviceId);
+                try
+                {
+                    // DirectML は EnableMemoryPattern = false が必須
+                    options.EnableMemoryPattern = false;
+                    options.AppendExecutionProvider_DML(deviceId);
+                    IsDirectMLActive = true;
+                }
+                catch (EntryPointNotFoundException)
+                {
+                    Debug.LogWarning(
+                        "[OnnxRuntimeBertRunner] DirectML entry point not found in onnxruntime.dll. " +
+                        "Falling back to CPU. To enable DirectML, place the DirectML-enabled " +
+                        "onnxruntime.dll in Assets/uStyleBertVITS2/Plugins/Windows/x86_64/.");
+                    options.EnableMemoryPattern = true;
+                }
             }
 
             // CPU fallback は暗黙的に追加される

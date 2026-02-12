@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.InferenceEngine;
 using uStyleBertVITS2.Diagnostics;
 
@@ -25,6 +26,8 @@ namespace uStyleBertVITS2.Inference
         private readonly float[] _paddedJaBert;
         private readonly float[] _zeroBertBuffer;   // 非JP-Extra用
         private readonly float[] _zeroEnBertBuffer;  // 非JP-Extra用
+        private readonly int[] _scalarIntBuf = new int[1];
+        private readonly float[] _scalarFloatBuf = new float[1];
         private bool _disposed;
 
         public SBV2ModelRunner(ModelAsset modelAsset, BackendType backendType)
@@ -107,24 +110,37 @@ namespace uStyleBertVITS2.Inference
             Array.Copy(tones, _paddedTones, seqLen);
             Array.Copy(languageIds, _paddedLangs, seqLen);
 
-            // BERT 埋め込みのパディング: [1, 1024, seqLen] → [1, 1024, padLen] (バッファ再利用)
-            Array.Clear(_paddedJaBert, 0, HiddenSize * _padLen);
-            for (int h = 0; h < HiddenSize; h++)
+            // BERT 埋め込みのパディング: [1, 1024, seqLen] → [1, 1024, padLen] (unsafe バッファ再利用)
+            unsafe
             {
-                Array.Copy(jaBertEmbedding, h * seqLen, _paddedJaBert, h * _padLen, seqLen);
+                fixed (float* srcPtr = jaBertEmbedding, dstPtr = _paddedJaBert)
+                {
+                    UnsafeUtility.MemClear(dstPtr, (long)HiddenSize * _padLen * sizeof(float));
+                    for (int h = 0; h < HiddenSize; h++)
+                        UnsafeUtility.MemCpy(
+                            dstPtr + h * _padLen,
+                            srcPtr + h * seqLen,
+                            seqLen * sizeof(float));
+                }
             }
 
             using var xTst = new Tensor<int>(new TensorShape(1, _padLen), _paddedPhonemes);
-            using var xTstLengths = new Tensor<int>(new TensorShape(1), new[] { seqLen });
+            _scalarIntBuf[0] = seqLen;
+            using var xTstLengths = new Tensor<int>(new TensorShape(1), _scalarIntBuf);
             using var tonesTensor = new Tensor<int>(new TensorShape(1, _padLen), _paddedTones);
             using var langTensor = new Tensor<int>(new TensorShape(1, _padLen), _paddedLangs);
-            using var sidTensor = new Tensor<int>(new TensorShape(1), new[] { speakerId });
+            _scalarIntBuf[0] = speakerId;
+            using var sidTensor = new Tensor<int>(new TensorShape(1), _scalarIntBuf);
             using var jaBertTensor = new Tensor<float>(new TensorShape(1, HiddenSize, _padLen), _paddedJaBert);
             using var styleTensor = new Tensor<float>(new TensorShape(1, 256), styleVector);
-            using var sdpTensor = new Tensor<float>(new TensorShape(1), new[] { sdpRatio });
-            using var noiseTensor = new Tensor<float>(new TensorShape(1), new[] { noiseScale });
-            using var noiseWTensor = new Tensor<float>(new TensorShape(1), new[] { noiseScaleW });
-            using var lengthTensor = new Tensor<float>(new TensorShape(1), new[] { lengthScale });
+            _scalarFloatBuf[0] = sdpRatio;
+            using var sdpTensor = new Tensor<float>(new TensorShape(1), _scalarFloatBuf);
+            _scalarFloatBuf[0] = noiseScale;
+            using var noiseTensor = new Tensor<float>(new TensorShape(1), _scalarFloatBuf);
+            _scalarFloatBuf[0] = noiseScaleW;
+            using var noiseWTensor = new Tensor<float>(new TensorShape(1), _scalarFloatBuf);
+            _scalarFloatBuf[0] = lengthScale;
+            using var lengthTensor = new Tensor<float>(new TensorShape(1), _scalarFloatBuf);
 
             _worker.SetInput("x_tst", xTst);
             _worker.SetInput("x_tst_lengths", xTstLengths);

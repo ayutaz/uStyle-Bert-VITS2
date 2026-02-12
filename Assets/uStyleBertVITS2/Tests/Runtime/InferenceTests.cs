@@ -159,5 +159,55 @@ namespace uStyleBertVITS2.Tests
             runner.Dispose();
             Assert.DoesNotThrow(() => runner.Dispose());
         }
+
+        // --- BertRunner dest オーバーロード テスト ---
+
+        [Test]
+        public void BertRunner_DestOverload_MatchesAlloc()
+        {
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            using var runner = new BertRunner(asset, BackendType.CPU);
+            int[] tokenIds = { 1, 100, 2 };
+            int[] mask = { 1, 1, 1 };
+            float[] allocResult = runner.Run(tokenIds, mask);
+            float[] dest = new float[1024 * tokenIds.Length];
+            runner.Run(tokenIds, mask, dest);
+            for (int i = 0; i < allocResult.Length; i++)
+                Assert.AreEqual(allocResult[i], dest[i], 1e-6f, $"index {i}");
+        }
+
+        [Test]
+        public void BertRunner_DestOverload_ThrowsOnNull()
+        {
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            using var runner = new BertRunner(asset, BackendType.CPU);
+            Assert.Throws<ArgumentNullException>(() =>
+                runner.Run(new[] { 1, 100, 2 }, new[] { 1, 1, 1 }, null));
+        }
+
+        [Test]
+        public void BertRunner_DestOverload_ThrowsOnSmallBuffer()
+        {
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            using var runner = new BertRunner(asset, BackendType.CPU);
+            float[] tooSmall = new float[1024]; // 必要: 1024*3=3072
+            Assert.Throws<ArgumentException>(() =>
+                runner.Run(new[] { 1, 100, 2 }, new[] { 1, 1, 1 }, tooSmall));
+        }
+
+        [Test]
+        public void BertRunner_DestOverload_WorksWithLargerBuffer()
+        {
+            var asset = LoadModelAsset(DeBERTaAssetPath);
+            using var runner = new BertRunner(asset, BackendType.CPU);
+            int[] tokenIds = { 1, 100, 2 };
+            int[] mask = { 1, 1, 1 };
+            int required = 1024 * tokenIds.Length;
+            float[] dest = new float[required + 512]; // oversized (ArrayPool scenario)
+            runner.Run(tokenIds, mask, dest);
+            float[] expected = runner.Run(tokenIds, mask);
+            for (int i = 0; i < required; i++)
+                Assert.AreEqual(expected[i], dest[i], 1e-6f, $"index {i}");
+        }
     }
 }

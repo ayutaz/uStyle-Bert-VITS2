@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.InferenceEngine;
 
 namespace uStyleBertVITS2.Inference
@@ -44,22 +45,29 @@ namespace uStyleBertVITS2.Inference
         public int PadLen => _padLen;
 
         /// <summary>
-        /// DeBERTa推論を実行する。
-        /// 入力を padLen にゼロパディングし、出力は実トークン長にトリムして返す。
+        /// DeBERTa推論を実行し、結果を事前確保済みバッファに書き込む。
+        /// 入力を padLen にゼロパディングし、出力は実トークン長にトリムして dest に格納する。
         /// </summary>
         /// <param name="tokenIds">[CLS] ... [SEP] のトークンID配列</param>
         /// <param name="attentionMask">アテンションマスク (有効トークン=1)</param>
-        /// <returns>BERT埋め込み [1, 1024, token_len] を flatten した float[]</returns>
-        public float[] Run(int[] tokenIds, int[] attentionMask)
+        /// <param name="dest">結果格納先。最低 HiddenSize(1024) × tokenIds.Length 要素が必要</param>
+        public void Run(int[] tokenIds, int[] attentionMask, float[] dest)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(BertRunner));
+            if (dest == null)
+                throw new ArgumentNullException(nameof(dest));
 
             int tokenLen = tokenIds.Length;
             if (tokenLen > _padLen)
                 throw new ArgumentException(
                     $"Token length {tokenLen} exceeds model capacity {_padLen}. " +
                     "Re-export the ONNX model with a larger seq_len.");
+
+            int requiredLen = HiddenSize * tokenLen;
+            if (dest.Length < requiredLen)
+                throw new ArgumentException(
+                    $"dest buffer too small: {dest.Length} < {requiredLen}.", nameof(dest));
 
             // パディング: tokenIds, attentionMask を padLen に合わせる (バッファ再利用)
             Array.Clear(_paddedIds, 0, _padLen);
@@ -78,16 +86,38 @@ namespace uStyleBertVITS2.Inference
             output.ReadbackAndClone();
             float[] fullOutput = output.DownloadToArray(); // [1, 1024, padLen]
 
-            // 出力トリム: 実際のトークン長分だけ返す
+            // 出力トリム: unsafe + UnsafeUtility.MemCpy で dest に書き込む
             if (tokenLen == _padLen)
-                return fullOutput;
-
-            float[] trimmed = new float[HiddenSize * tokenLen];
-            for (int h = 0; h < HiddenSize; h++)
             {
-                Array.Copy(fullOutput, h * _padLen, trimmed, h * tokenLen, tokenLen);
+                Buffer.BlockCopy(fullOutput, 0, dest, 0, requiredLen * sizeof(float));
+                return;
             }
-            return trimmed;
+
+            unsafe
+            {
+                fixed (float* srcPtr = fullOutput, dstPtr = dest)
+                {
+                    for (int h = 0; h < HiddenSize; h++)
+                        UnsafeUtility.MemCpy(
+                            dstPtr + h * tokenLen,
+                            srcPtr + h * _padLen,
+                            tokenLen * sizeof(float));
+                }
+            }
+        }
+
+        /// <summary>
+        /// DeBERTa推論を実行する。
+        /// 入力を padLen にゼロパディングし、出力は実トークン長にトリムして返す。
+        /// </summary>
+        /// <param name="tokenIds">[CLS] ... [SEP] のトークンID配列</param>
+        /// <param name="attentionMask">アテンションマスク (有効トークン=1)</param>
+        /// <returns>BERT埋め込み [1, 1024, token_len] を flatten した float[]</returns>
+        public float[] Run(int[] tokenIds, int[] attentionMask)
+        {
+            float[] result = new float[HiddenSize * tokenIds.Length];
+            Run(tokenIds, attentionMask, result);
+            return result;
         }
 
         private static int GetSeqLenFromModel(Model model)

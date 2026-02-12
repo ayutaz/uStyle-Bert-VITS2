@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using UnityEngine;
 using uStyleBertVITS2.Audio;
+using uStyleBertVITS2.Services;
 
 namespace uStyleBertVITS2.Tests
 {
@@ -111,6 +112,38 @@ namespace uStyleBertVITS2.Tests
             Assert.AreEqual(1, clip.channels);
 
             Object.DestroyImmediate(clip);
+        }
+
+        // --- GetTrimmedLength テスト ---
+
+        [Test]
+        public void GetTrimmedLength_ShortArray_ReturnsFullLength()
+        {
+            float[] samples = new float[256]; // < blockSize(512)
+            Assert.AreEqual(256, TTSPipeline.GetTrimmedLength(samples));
+        }
+
+        [Test]
+        public void GetTrimmedLength_NoSilence_ReturnsFullLength()
+        {
+            float[] samples = new float[1024]; // 2 blocks
+            samples[800] = 0.1f; // 最終ブロックに信号
+            Assert.AreEqual(1024, TTSPipeline.GetTrimmedLength(samples));
+        }
+
+        [Test]
+        public void GetTrimmedLength_TrailingSilence_Trimmed()
+        {
+            float[] samples = new float[2048]; // 4 blocks
+            samples[600] = 0.5f; // block 1 に信号 (blocks 2,3 は無音)
+            Assert.AreEqual(1024, TTSPipeline.GetTrimmedLength(samples)); // blocks 0-1 保持
+        }
+
+        [Test]
+        public void GetTrimmedLength_AllSilence_ReturnsOneBlock()
+        {
+            float[] samples = new float[2048]; // 4 blocks, 全てゼロ
+            Assert.AreEqual(512, TTSPipeline.GetTrimmedLength(samples)); // 最低1ブロック
         }
     }
 }

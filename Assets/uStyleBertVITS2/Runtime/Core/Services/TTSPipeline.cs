@@ -91,21 +91,23 @@ namespace uStyleBertVITS2.Services
 
             TTSDebugLog.Log("TTS.Tokenize", $"tokenIds.Length={tokenIds.Length}");
 
-            // Stage 3: BERT推論
-            float[] bertData;
-            using (s_BertInfer.Auto())
-            {
-                bertData = _bert.Run(tokenIds, attentionMask);
-            }
-
-            TTSDebugLog.Log("TTS.BERT",
-                $"bertData.Length={bertData.Length} ({tokenIds.Length} tokens × 1024 dim)");
-
-            // Stage 4: word2phアライメント (Burst + ArrayPool)
-            int alignedLen = BertAligner.EmbeddingDimension * phoneSeqLen;
-            float[] alignedBert = System.Buffers.ArrayPool<float>.Shared.Rent(alignedLen);
+            // Stage 3: BERT推論 (ArrayPool)
+            int bertLen = BertAligner.EmbeddingDimension * tokenIds.Length;
+            float[] bertData = System.Buffers.ArrayPool<float>.Shared.Rent(bertLen);
+            float[] alignedBert = null;
             try
             {
+                using (s_BertInfer.Auto())
+                {
+                    _bert.Run(tokenIds, attentionMask, bertData);
+                }
+
+                TTSDebugLog.Log("TTS.BERT",
+                    $"bertData.Length={bertLen} ({tokenIds.Length} tokens × 1024 dim)");
+
+                // Stage 4: word2phアライメント (Burst + ArrayPool)
+                int alignedLen = BertAligner.EmbeddingDimension * phoneSeqLen;
+                alignedBert = System.Buffers.ArrayPool<float>.Shared.Rent(alignedLen);
                 using (s_BertAlign.Auto())
                 {
                     BertAligner.AlignBertToPhonemesBurst(
@@ -138,13 +140,13 @@ namespace uStyleBertVITS2.Services
                 TTSDebugLog.Log("TTS.Model",
                     $"audioSamples.Length={audioSamples.Length} ({(float)audioSamples.Length / _sampleRate:F2}s @ {_sampleRate}Hz)");
 
-                // Stage 7: AudioClip生成
+                // Stage 7: AudioClip生成 (TrimTrailingSilence in-place)
                 AudioClip clip;
                 using (s_Audio.Auto())
                 {
                     TTSAudioUtility.NormalizeSamplesBurst(audioSamples, _normalizationPeak);
-                    audioSamples = TrimTrailingSilence(audioSamples);
-                    clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
+                    int trimmedLength = GetTrimmedLength(audioSamples);
+                    clip = AudioClip.Create("TTS", trimmedLength, 1, _sampleRate, false);
                     clip.SetData(audioSamples, 0);
                 }
 
@@ -152,7 +154,8 @@ namespace uStyleBertVITS2.Services
             }
             finally
             {
-                System.Buffers.ArrayPool<float>.Shared.Return(alignedBert);
+                if (alignedBert != null) System.Buffers.ArrayPool<float>.Shared.Return(alignedBert);
+                System.Buffers.ArrayPool<float>.Shared.Return(bertData);
             }
         }
 
@@ -203,24 +206,26 @@ namespace uStyleBertVITS2.Services
             // --- MainThread: BERT推論 (Sentis) ---
             await UniTask.SwitchToMainThread(ct);
 
-            float[] bertData;
-            using (s_BertInfer.Auto())
-            {
-                bertData = _bert.Run(tokenIds, attentionMask);
-            }
-
-            TTSDebugLog.Log("TTS.BERT",
-                $"bertData.Length={bertData.Length} ({tokenIds.Length} tokens × 1024 dim)");
-
-            ct.ThrowIfCancellationRequested();
-
-            // --- ThreadPool: BertAlignment + StyleVector ---
-            await UniTask.SwitchToThreadPool();
-
-            int alignedLenAsync = BertAligner.EmbeddingDimension * phoneSeqLen;
-            float[] alignedBert = System.Buffers.ArrayPool<float>.Shared.Rent(alignedLenAsync);
+            int bertLen = BertAligner.EmbeddingDimension * tokenIds.Length;
+            float[] bertData = System.Buffers.ArrayPool<float>.Shared.Rent(bertLen);
+            float[] alignedBert = null;
             try
             {
+                using (s_BertInfer.Auto())
+                {
+                    _bert.Run(tokenIds, attentionMask, bertData);
+                }
+
+                TTSDebugLog.Log("TTS.BERT",
+                    $"bertData.Length={bertLen} ({tokenIds.Length} tokens × 1024 dim)");
+
+                ct.ThrowIfCancellationRequested();
+
+                // --- ThreadPool: BertAlignment + StyleVector ---
+                await UniTask.SwitchToThreadPool();
+
+                int alignedLenAsync = BertAligner.EmbeddingDimension * phoneSeqLen;
+                alignedBert = System.Buffers.ArrayPool<float>.Shared.Rent(alignedLenAsync);
                 using (s_BertAlign.Auto())
                 {
                     BertAligner.AlignBertToPhonemesBurst(
@@ -262,8 +267,8 @@ namespace uStyleBertVITS2.Services
                 using (s_Audio.Auto())
                 {
                     TTSAudioUtility.NormalizeSamplesBurst(audioSamples, _normalizationPeak);
-                    audioSamples = TrimTrailingSilence(audioSamples);
-                    clip = AudioClip.Create("TTS", audioSamples.Length, 1, _sampleRate, false);
+                    int trimmedLength = GetTrimmedLength(audioSamples);
+                    clip = AudioClip.Create("TTS", trimmedLength, 1, _sampleRate, false);
                     clip.SetData(audioSamples, 0);
                 }
 
@@ -271,7 +276,8 @@ namespace uStyleBertVITS2.Services
             }
             finally
             {
-                System.Buffers.ArrayPool<float>.Shared.Return(alignedBert);
+                if (alignedBert != null) System.Buffers.ArrayPool<float>.Shared.Return(alignedBert);
+                System.Buffers.ArrayPool<float>.Shared.Return(bertData);
             }
         }
 
@@ -292,18 +298,19 @@ namespace uStyleBertVITS2.Services
         }
 
         /// <summary>
-        /// 末尾の無音区間を除去する。
+        /// 末尾の無音区間を除いた有効サンプル数を返す（in-place; 配列のコピーは行わない）。
         /// パディングやデコーダの出力サイズ切り上げで生じる末尾の完全無音を取り除く。
         /// ピーク振幅ベースでブロック単位に判定し、有音ブロックが見つかったら停止する。
+        /// AudioClip.Create に trimmedLength を渡し、SetData は元の配列から直接コピーする。
         /// </summary>
-        private static float[] TrimTrailingSilence(float[] samples)
+        internal static int GetTrimmedLength(float[] samples)
         {
             const int blockSize = 512; // 1 フレーム = hop_length
             const float silenceThreshold = 0.002f; // ピーク振幅閾値
 
             int totalBlocks = samples.Length / blockSize;
             if (totalBlocks <= 1)
-                return samples;
+                return samples.Length;
 
             // 末尾からブロック単位でピーク振幅を確認し、無音ブロックをスキップ
             int lastActiveBlock = totalBlocks - 1;
@@ -323,12 +330,7 @@ namespace uStyleBertVITS2.Services
             }
 
             int trimmedLength = (lastActiveBlock + 1) * blockSize;
-            if (trimmedLength >= samples.Length)
-                return samples;
-
-            var result = new float[trimmedLength];
-            Array.Copy(samples, result, trimmedLength);
-            return result;
+            return trimmedLength >= samples.Length ? samples.Length : trimmedLength;
         }
 
         public void Dispose()

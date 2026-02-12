@@ -101,6 +101,19 @@ public Worker CreateWorkerWithFallback(Model model, BackendType preferred, Backe
 
 > **警告**: DeBERTa FP32 を `BackendType.GPUCompute` で実行すると D3D12 デバイスロストが発生する。BERT推論には必ず `BackendType.CPU` を使用すること。
 
+### BERT バックエンド別ベンチマーク
+
+環境: NVIDIA GeForce RTX 4070 Ti SUPER / Warmup 3回 / 計測 10回平均
+
+| 入力サイズ | Sentis CPU | ORT CPU | スピードアップ |
+|---|---|---|---|
+| 5 tokens | ~1000 ms | ~410 ms | **1.9x** |
+| 20 tokens | ~860-1090 ms | ~410-554 ms | **2.0x** |
+| 40 tokens | ~860-1060 ms | ~460-530 ms | **2.0x** |
+
+> ORT CPU は Sentis CPU の約2倍高速。ORT DirectML は Editor 環境では DML DLL 未ロードのためスキップ（ビルド済みアプリで計測可）。
+> ベンチマーク実行: `BertInferenceBenchmarkTests` (PlayMode, Category: Benchmark)
+
 ---
 
 ## フレーム分散推論 (ScheduleIterable)

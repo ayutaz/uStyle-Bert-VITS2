@@ -95,6 +95,14 @@ monolithic方式（1ファイル）でエクスポート。6つのサブモジ�
 | BERT=CPU + TTS=GPU (初回) | ~969ms |
 | BERT=CPU + TTS=GPU (2回目以降) | ~621ms |
 
+### BERT バックエンド別ベンチマーク (RTX 4070 Ti SUPER)
+
+| 入力サイズ | Sentis CPU | ORT CPU | スピードアップ |
+|---|---|---|---|
+| 5 tokens | ~1000 ms | ~410 ms | 1.9x |
+| 20 tokens | ~900 ms | ~410 ms | 2.0x |
+| 40 tokens | ~1060 ms | ~460 ms | 2.0x |
+
 ## ONNX変換
 
 ### 変換スクリプト

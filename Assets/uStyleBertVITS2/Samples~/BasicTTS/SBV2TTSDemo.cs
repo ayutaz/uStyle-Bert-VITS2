@@ -1,9 +1,13 @@
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Unity.InferenceEngine;
 using UnityEngine;
 using UnityEngine.UI;
 using uStyleBertVITS2.Configuration;
 using uStyleBertVITS2.Diagnostics;
+using uStyleBertVITS2.Inference;
 using uStyleBertVITS2.Services;
 
 namespace uStyleBertVITS2.Samples
@@ -20,6 +24,7 @@ namespace uStyleBertVITS2.Samples
         [Header("UI")]
         [SerializeField] private InputField _inputField;
         [SerializeField] private Button _synthesizeButton;
+        [SerializeField] private Button _benchmarkButton;
         [SerializeField] private Text _statusText;
 
         [Header("Audio")]
@@ -35,12 +40,18 @@ namespace uStyleBertVITS2.Samples
         private CancellationTokenSource _cts;
         private bool _isReady;
         private bool _isSynthesizing;
+        private bool _isBenchmarking;
 
         private void Awake()
         {
             if (_synthesizeButton != null)
                 _synthesizeButton.onClick.AddListener(OnSynthesizeClicked);
+            if (_benchmarkButton != null)
+                _benchmarkButton.onClick.AddListener(OnBenchmarkClicked);
         }
+
+        [Header("Benchmark")]
+        [SerializeField] private bool _autoRunBenchmark;
 
         private void Start()
         {
@@ -60,6 +71,26 @@ namespace uStyleBertVITS2.Samples
                 SetStatus($"Error: {e.Message}");
                 Debug.LogError($"TTS initialization failed: {e}");
             }
+
+            // --benchmark コマンドライン引数 or Inspector フラグで自動実行
+            if (_autoRunBenchmark || Array.Exists(Environment.GetCommandLineArgs(), a => a == "--benchmark"))
+            {
+                RunBenchmarkAndQuitAsync().Forget();
+            }
+        }
+
+        private async UniTaskVoid RunBenchmarkAndQuitAsync()
+        {
+            // 初期化完了を1フレーム待つ
+            await UniTask.Yield();
+            await RunBenchmarkAsync();
+
+            // ログフラッシュを待ってから終了
+            #if !UNITY_EDITOR
+            Debug.Log("[Benchmark] Quitting application.");
+            await UniTask.DelayFrame(5);
+            Application.Quit();
+            #endif
         }
 
         private void OnSynthesizeClicked()
@@ -125,6 +156,74 @@ namespace uStyleBertVITS2.Samples
             {
                 _isSynthesizing = false;
                 if (_synthesizeButton != null) _synthesizeButton.interactable = true;
+            }
+        }
+
+        private void OnBenchmarkClicked()
+        {
+            if (_isBenchmarking) return;
+            RunBenchmarkAsync().Forget();
+        }
+
+
+        private async UniTask RunBenchmarkAsync()
+        {
+            _isBenchmarking = true;
+            if (_benchmarkButton != null) _benchmarkButton.interactable = false;
+            if (_synthesizeButton != null) _synthesizeButton.interactable = false;
+            SetStatus("Benchmark running...");
+
+            try
+            {
+                var backends = new List<BertBenchmark.BackendResult>();
+
+                // --- Sentis CPU ---
+                SetStatus("Benchmark: Sentis CPU...");
+                await UniTask.Yield(); // UI更新のためフレーム待ち
+
+                if (_settings.BertModel != null)
+                {
+                    try
+                    {
+                        using var sentisRunner = new BertRunner(_settings.BertModel, BackendType.CPU);
+                        var sentisResults = BertBenchmark.RunAllSizes(sentisRunner);
+                        backends.Add(new BertBenchmark.BackendResult
+                        {
+                            BackendName = "Sentis CPU",
+                            Sizes = sentisResults,
+                        });
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogWarning($"[Benchmark] Sentis CPU failed: {e.Message}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[Benchmark] Sentis skipped — BertModel not assigned");
+                }
+
+                // --- ORT DirectML + CPU ---
+                SetStatus("Benchmark: ORT...");
+                await UniTask.Yield();
+
+                var ortPath = System.IO.Path.Combine(Application.streamingAssetsPath, _settings.OrtBertModelPath);
+                BertBenchmark.RunOrtBenchmarks(ortPath, backends);
+
+                string report = BertBenchmark.FormatResults(backends);
+                Debug.Log(report);
+                SetStatus(backends.Count > 0 ? "Benchmark done — see console" : "No backends available");
+            }
+            catch (Exception e)
+            {
+                SetStatus($"Benchmark error: {e.Message}");
+                Debug.LogError($"[Benchmark] {e}");
+            }
+            finally
+            {
+                _isBenchmarking = false;
+                if (_benchmarkButton != null) _benchmarkButton.interactable = true;
+                if (_synthesizeButton != null && _isReady) _synthesizeButton.interactable = true;
             }
         }
 

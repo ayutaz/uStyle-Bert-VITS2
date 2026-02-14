@@ -9,7 +9,7 @@
     "name": "ayutaz"
   },
   "documentationUrl": "https://github.com/ayutaz/uStyle-Bert-VITS2#readme",
-  "changelogUrl": "https://github.com/ayutaz/uStyle-Bert-VITS2/releases",
+  "changelogUrl": "https://github.com/ayutaz/uStyle-Bert-VITS2/blob/main/CHANGELOG.md",
   "dependencies": {
     "com.unity.ai.inference": "2.5.0"
   },

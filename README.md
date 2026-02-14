@@ -130,6 +130,7 @@ pipeline.Dispose();
 
 ## More Docs
 
+- リリースノート: [CHANGELOG.md](CHANGELOG.md)
 - 実装方針: `docs/00_implementation_roadmap.md`
 - ONNX変換: `docs/01_onnx_export.md`
 - Unity/Sentis統合: `docs/03_unity_sentis_integration.md`

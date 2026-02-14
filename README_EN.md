@@ -130,6 +130,7 @@ For detailed benchmarks, see [docs/05_performance_optimization.md](docs/05_perfo
 
 ## More Docs
 
+- Release notes: [CHANGELOG.md](CHANGELOG.md)
 - Implementation roadmap: `docs/00_implementation_roadmap.md`
 - ONNX conversion: `docs/01_onnx_export.md`
 - Unity/Sentis integration: `docs/03_unity_sentis_integration.md`

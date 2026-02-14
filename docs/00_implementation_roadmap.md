@@ -64,10 +64,12 @@ Phase 0: プロジェクト基盤 [Done]
 
 | ファイル | 説明 |
 |---|---|
-| `scripts/convert_for_sentis.py` | SynthesizerTrnエクスポート（opset 15, FP16, int64→int32） |
-| `scripts/convert_bert_for_sentis.py` | DeBERTaエクスポート（opset 15, FP16） |
+| `scripts/convert_sbv2_for_sentis.py` | HuggingFace からの一括変換（SBV2/DeBERTa, int64→int32） |
+| `scripts/convert_for_sentis.py` | SynthesizerTrnエクスポート（opset 15, int64→int32） |
+| `scripts/convert_bert_for_sentis.py` | DeBERTaエクスポート（opset 15, FP32） |
 | `scripts/validate_onnx.py` | OnnxRuntime推論検証（MSE < 1e-3） |
-| `scripts/requirements.txt` | Python依存パッケージ |
+| `scripts/pyproject.toml` | Python依存パッケージ定義 |
+| `scripts/uv.lock` | lockfile |
 
 **Unity側（基盤）**:
 
@@ -94,7 +96,7 @@ Phase 0: プロジェクト基盤 [Done]
 ### 実装仕様の要点
 
 - ONNX opset 15を指定（Sentis互換）
-- FP16変換（`keep_io_types=True` で入出力はfloat32維持）
+- SBV2は必要に応じてFP16変換可能（`keep_io_types=True`）。現行配布はFP32命名（`sbv2_model.onnx`）
 - int64→int32変換（Sentisは`Tensor<int>`=int32のみ対応）
 - `onnxsim.simplify()` でグラフ簡略化
 

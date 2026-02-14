@@ -112,14 +112,14 @@ monolithic方式（1ファイル）でエクスポート。6つのサブモジ�
 
 | スクリプト | 説明 |
 |---|---|
-| `scripts/convert_for_sentis.py` | SynthesizerTrn エクスポート（opset 15, FP16, int64→int32） |
+| `scripts/convert_for_sentis.py` | SynthesizerTrn エクスポート（opset 15, int64→int32, SBV2は任意でFP16化） |
 | `scripts/convert_bert_for_sentis.py` | DeBERTa エクスポート（opset 15, FP32） |
 | `scripts/convert_sbv2_for_sentis.py` | HuggingFace モデルからの一括変換 |
 | `scripts/validate_onnx.py` | OnnxRuntime 推論検証 |
 
 ### 変換時の注意点
 - **opset 15を指定すること** — Sentisはopset 7-15をサポート（実態として16+も動作可能）
-- **SBV2 は FP16 推奨** — メモリ使用量が半減、品質劣化はほぼなし
+- **現行配布アセットは FP32 命名** — `sbv2_model.onnx` / `deberta_model.onnx`。SBV2のみ任意でFP16化可能
 - **DeBERTa は FP32 必須** — Sentis 2.5.0 は FP16 定数テンソルデータをインポート不可
 - **int64→int32変換** — Sentis は `Tensor<int>` = int32 のみ対応。Constant ノード(5000+個)、Cast ノード、中間 value_info もすべて変換が必要
 - **SBV2 静的エクスポート** — `--no-fp16 --no-simplify` オプションで Sentis 互換の静的シェイプ ONNX を生成
@@ -238,7 +238,10 @@ Assets/uStyleBertVITS2/
       OpenJTalkDic/                # NAIST JDIC辞書 (8ファイル)
       Tokenizer/vocab.json         # DeBERTa語彙
       Models/                      # ONNXモデル
-      StyleVectors/                # style_vectors.npy
+        sbv2_model.onnx
+        deberta_model.onnx
+        deberta_for_ort.onnx
+        style_vectors.npy
 scripts/
   convert_for_sentis.py            # SBV2 ONNX変換
   convert_bert_for_sentis.py       # DeBERTa ONNX変換

@@ -550,9 +550,9 @@ private void WarmUp()
 - async/await パターン（uCosyVoiceではCoroutineベース）
 
 ### メモリ
-- DeBERTa FP16: ~600MB GPU/CPU メモリ
-- SBV2 FP16: ~200-400MB
-- 合計: ~800MB-1GB → GPU メモリ不足時は CPU フォールバック
+- DeBERTa FP32 (Sentis): ~700MB GPU/CPU メモリ
+- SBV2 FP32: ~200MB 前後
+- 合計モデルサイズ目安: ~900MB（+ ワーキングメモリ）→ GPU メモリ不足時は CPU フォールバック
 
 ---
 

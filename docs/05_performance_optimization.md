@@ -256,22 +256,22 @@ public async Awaitable<AudioClip> SynthesizeAsync(TTSRequest request)
 
 ### FP16 vs FP32 トレードオフ
 
-| 精度 | DeBERTaサイズ | SBV2サイズ | 合計 | 品質影響 |
+| 構成 | DeBERTaサイズ | SBV2サイズ | 合計 | 備考 |
 |---|---|---|---|---|
-| FP32 | ~1.2GB | ~400-800MB | ~1.6-2GB | ベースライン |
-| **FP16** | **~600MB** | **~200-400MB** | **~800MB-1.2GB** | **ほぼ無し** |
+| 現行配布 (FP32 / FP32) | ~700MB | ~200MB | ~900MB | `deberta_model.onnx` + `sbv2_model.onnx` |
+| 任意最適化 (FP32 / FP16) | ~700MB | ~120-200MB | ~820-900MB | SBV2のみFP16化（DeBERTaはFP32固定） |
 
-**FP16を推奨**。`keep_io_types=True` でI/OはFP32のまま内部のみFP16にすることで、Sentisとのテンソル受け渡しが安定する。
+**注意**: DeBERTa は Sentis 2.5.0 制約により FP32 前提。`keep_io_types=True` を使った FP16 化は SBV2 側の任意最適化として扱う。
 
 ### 合計メモリ見積
 
 | 項目 | GPU (VRAM) | CPU (RAM) |
 |---|---|---|
-| DeBERTa FP16モデル | ~600MB | ~600MB |
-| SBV2 FP16モデル | ~200-400MB | ~200-400MB |
+| DeBERTa FP32モデル | ~700MB | ~700MB |
+| SBV2 FP32モデル | ~200MB | ~200MB |
 | Sentisワーキングメモリ | ~100-200MB | ~100-200MB |
 | テンソルバッファ | ~50MB | ~50MB |
-| **合計** | **~950MB-1.25GB** | **~950MB-1.25GB** |
+| **合計** | **~1.05GB-1.15GB** | **~1.05GB-1.15GB** |
 
 ### モデルロード戦略
 

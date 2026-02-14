@@ -761,9 +761,9 @@ public class TTSPipeline
 |---|---|---|---|
 | G2P | `TTS.G2P` | < 30ms (GPU) / < 50ms (CPU) | UTF-8バッファプール、結果キャッシュ |
 | トークナイズ | `TTS.Tokenize` | < 5ms | char→int直接辞書 |
-| BERT推論 | `TTS.BERT.Inference` | < 50ms (GPU) / < 300ms (CPU) | GPUCompute、FP16 |
+| BERT推論 | `TTS.BERT.Inference` | < 300ms (Sentis CPU) / < 100ms (ORT DirectML, short text) | SentisはCPU、GPUはORT+DirectML |
 | BERT展開 | `TTS.BERT.Alignment` | < 5ms (GPU) / < 20ms (CPU) | Burst Job、Buffer.BlockCopy |
-| TTS推論 | `TTS.SynthesizerTrn` | < 50ms (GPU) / < 200ms (CPU) | GPUCompute、FP16 |
+| TTS推論 | `TTS.SynthesizerTrn` | < 50ms (GPU) / < 200ms (CPU) | GPUCompute、バッファ再利用 |
 | 音声生成 | `TTS.AudioClip` | < 5ms (GPU) / < 10ms (CPU) | Burst正規化 |
 | **合計** | — | **< 140ms (GPU)** | — |
 

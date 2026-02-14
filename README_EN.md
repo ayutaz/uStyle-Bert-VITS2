@@ -71,10 +71,13 @@ Install via Unity Package Manager by adding the following to `Packages/manifest.
 
 Place the following files under `Assets/StreamingAssets/uStyleBertVITS2/`:
 
+Prebuilt assets are published on Hugging Face:  
+https://huggingface.co/ayousanz/uStyle-Bert-VITS2
+
 ```
 StreamingAssets/uStyleBertVITS2/
   Models/
-    sbv2_model.onnx          # SynthesizerTrn (FP16 recommended)
+    sbv2_model.onnx          # SynthesizerTrn (FP32, current distribution)
     deberta_model.onnx        # DeBERTa for Sentis (FP32, int32)
     deberta_for_ort.onnx      # DeBERTa for ORT (FP32, int64) *ORT only
     style_vectors.npy         # Style vectors

@@ -4,7 +4,7 @@
 
 | モデル | 変換元 | 推奨精度 | 推定サイズ |
 |---|---|---|---|
-| SynthesizerTrn (メインTTS) | `*.safetensors` | FP16 | ~200-400MB |
+| SynthesizerTrn (メインTTS) | `*.safetensors` | FP32（現行配布） | ~200-400MB |
 | DeBERTa-v2-large-japanese | `ku-nlp/deberta-v2-large-japanese-char-wwm` | FP32 | ~600-1200MB |
 
 JP-Extra版のため BERT入力は `bert` 単一入力のみ（通常モデルの `ja_bert`/`bert`/`en_bert` 3入力ではない）。
@@ -111,7 +111,7 @@ def convert_int64_to_int32(model_path, output_path):
 2. `torch.onnx.export()` で opset 15 を明示指定
 3. `onnxsim.simplify()` でグラフ簡略化
 4. int64→int32キャスト（上記スクリプト）
-5. FP16変換（`onnxconverter-common` の `convert_float_to_float16()`, `keep_io_types=True`）
+5. 必要に応じて SBV2 を FP16 変換（`onnxconverter-common` の `convert_float_to_float16()`, `keep_io_types=True`）
 
 ```python
 # 概要（擬似コード）
@@ -151,9 +151,10 @@ model_simplified, check = simplify(model_onnx)
 # 5. int64→int32
 convert_int64_to_int32(model_simplified)
 
-# 6. FP16変換
+# 6. (optional) FP16変換
+# 配布既定は FP32 (sbv2_model.onnx)
 model_fp16 = float16.convert_float_to_float16(model_simplified, keep_io_types=True)
-onnx.save(model_fp16, "sbv2_model.onnx")
+onnx.save(model_fp16, "sbv2_model_fp16.onnx")
 ```
 
 ### `scripts/convert_sbv2_for_sentis.py` — HuggingFaceからの一括変換
@@ -173,7 +174,6 @@ HuggingFace上のSBV2モデルをダウンロードし、SynthesizerTrnをmonoli
 3. opset 15で export
 4. onnxsim 簡略化
 5. int64→int32キャスト
-6. FP16変換
 
 ```python
 # DeBERTaラッパー（最終3隠れ層結合）
@@ -226,4 +226,4 @@ Unity Editorでインポートすると自動的に `.sentis` アセットに変
 
 - **DeBERTaのサイズ**: FP32で~600-1200MB（変換設定依存）。Sentisでは `BackendType.CPU` 前提、ORT+DirectMLでGPU推論を利用可能
 - **monolithic vs 分割**: まずmonolithic（1ファイル）で試す。Sentis互換性問題が出たら enc_p/dp/sdp/flow/dec/emb_g の6分割を検討
-- **FP16の`keep_io_types=True`**: 入出力はfloat32のまま、内部のみFP16にする。Sentisとのテンソル受け渡しが安定する
+- **SBV2のFP16変換は任意**: `keep_io_types=True` で入出力はfloat32のまま内部のみFP16化できる。現行配布アセットはFP32命名を採用

@@ -71,10 +71,13 @@ Unity Package Manager から git URL でインストールできます。`Packag
 
 以下のファイルを `Assets/StreamingAssets/uStyleBertVITS2/` に配置してください:
 
+公開済みアセットは Hugging Face から取得できます:  
+https://huggingface.co/ayousanz/uStyle-Bert-VITS2
+
 ```
 StreamingAssets/uStyleBertVITS2/
   Models/
-    sbv2_model.onnx          # SynthesizerTrn (FP16推奨)
+    sbv2_model.onnx          # SynthesizerTrn (FP32, 現行配布)
     deberta_model.onnx        # DeBERTa for Sentis (FP32, int32)
     deberta_for_ort.onnx      # DeBERTa for ORT (FP32, int64) ※ORT使用時のみ
     style_vectors.npy         # スタイルベクトル

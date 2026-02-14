@@ -1,0 +1,30 @@
+{
+  "name": "com.ustyle.bert-vits2",
+  "version": "0.1.0",
+  "displayName": "uStyle-Bert-VITS2",
+  "description": "Runtime library for real-time Japanese TTS in Unity using Style-Bert-VITS2 ONNX models (Sentis / ONNX Runtime).",
+  "unity": "6000.3",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "ayutaz"
+  },
+  "documentationUrl": "https://github.com/ayutaz/uStyle-Bert-VITS2#readme",
+  "changelogUrl": "https://github.com/ayutaz/uStyle-Bert-VITS2/releases",
+  "dependencies": {
+    "com.unity.ai.inference": "2.5.0"
+  },
+  "samples": [
+    {
+      "displayName": "Basic TTS",
+      "description": "Minimal demo scene for uStyle-Bert-VITS2 pipeline.",
+      "path": "Samples~/BasicTTS"
+    }
+  ],
+  "keywords": [
+    "tts",
+    "japanese",
+    "onnx",
+    "unity",
+    "sentis"
+  ]
+}

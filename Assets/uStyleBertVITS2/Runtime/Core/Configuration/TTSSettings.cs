@@ -72,7 +72,7 @@ namespace uStyleBertVITS2.Configuration
         public string VocabPath = "uStyleBertVITS2/Tokenizer/vocab.json";
 
         [Tooltip("スタイルベクトル .npy ファイルのパス")]
-        public string StyleVectorPath = "uStyleBertVITS2/StyleVectors/style_vectors.npy";
+        public string StyleVectorPath = "uStyleBertVITS2/Models/style_vectors.npy";
 
         [Header("Performance")]
         [Tooltip("起動時にウォームアップ推論を実行する")]

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Reports
+    url: https://github.com/ayutaz/uStyle-Bert-VITS2/security/policy
+    about: Please use the security policy for vulnerability reports.

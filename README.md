@@ -22,6 +22,7 @@
 - [Limitations](#limitations)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+- [Security](#security)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
 
@@ -59,12 +60,12 @@ Unity Package Manager から git URL でインストールできます。`Packag
 ```json
 {
   "dependencies": {
-    "com.ustyle.bert-vits2": "https://github.com/<owner>/uStyle-Bert-VITS2.git?path=Assets/uStyleBertVITS2"
+    "com.ustyle.bert-vits2": "https://github.com/ayutaz/uStyle-Bert-VITS2.git?path=Assets/uStyleBertVITS2"
   }
 }
 ```
 
-> **Note**: 依存パッケージ（Sentis, UniTask, ZString, ONNX Runtime）は別途インストールが必要です。
+> **Note**: Sentis は package dependency として解決されます。UniTask / ZString / ONNX Runtime は別途インストールが必要です。
 
 ### モデルファイルを配置
 
@@ -76,7 +77,6 @@ StreamingAssets/uStyleBertVITS2/
     sbv2_model.onnx          # SynthesizerTrn (FP16推奨)
     deberta_model.onnx        # DeBERTa for Sentis (FP32, int32)
     deberta_for_ort.onnx      # DeBERTa for ORT (FP32, int64) ※ORT使用時のみ
-  StyleVectors/
     style_vectors.npy         # スタイルベクトル
   OpenJTalkDic/               # NAIST JDIC辞書 (8ファイル)
     char.bin, left-id.def, matrix.bin, pos-id.def,
@@ -90,7 +90,7 @@ StreamingAssets/uStyleBertVITS2/
 >
 > ```bash
 > cd scripts && uv sync
-> uv run convert_sbv2_for_sentis.py --repo-id <hf-repo-id> --no-fp16 --no-simplify
+> uv run convert_sbv2_for_sentis.py --repo <hf-repo-id> --no-fp16 --no-simplify
 > ```
 >
 > ORT 用の `deberta_for_ort.onnx` は Sentis 用とは別の変換が必要です（int64 維持、FP32 出力 Cast 追加）。
@@ -207,7 +207,7 @@ cd scripts
 uv sync
 
 # HuggingFace モデルからの一括変換
-uv run convert_sbv2_for_sentis.py --repo-id <hf-repo-id> --no-fp16 --no-simplify
+uv run convert_sbv2_for_sentis.py --repo <hf-repo-id> --no-fp16 --no-simplify
 
 # 個別変換
 uv run convert_for_sentis.py <model_path>          # SynthesizerTrn
@@ -266,7 +266,12 @@ Windows x86_64 環境で実行しているか確認してください。macOS / 
 
 ## Contributing
 
-Issue や Pull Request を歓迎します。バグ報告・機能リクエストは [GitHub Issues](https://github.com/<owner>/uStyle-Bert-VITS2/issues) にお願いします。
+Issue や Pull Request を歓迎します。詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。  
+バグ報告・機能リクエストは [GitHub Issues](https://github.com/ayutaz/uStyle-Bert-VITS2/issues) にお願いします。
+
+## Security
+
+脆弱性報告ポリシーは [SECURITY.md](SECURITY.md) を参照してください。
 
 ## Acknowledgements
 
@@ -285,4 +290,4 @@ Issue や Pull Request を歓迎します。バグ報告・機能リクエスト
 
 Apache License 2.0 — 詳細は [LICENSE](LICENSE) を参照してください。
 
-モデルの重みは元の [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) ライセンスに従います。
+モデルや辞書などの第三者由来アセットには別ライセンス/利用条件が適用される場合があります。詳細は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。

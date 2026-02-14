@@ -22,6 +22,7 @@ A Unity library for real-time inference of [Style-Bert-VITS2](https://github.com
 - [Limitations](#limitations)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
+- [Security](#security)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
 
@@ -59,12 +60,12 @@ Install via Unity Package Manager by adding the following to `Packages/manifest.
 ```json
 {
   "dependencies": {
-    "com.ustyle.bert-vits2": "https://github.com/<owner>/uStyle-Bert-VITS2.git?path=Assets/uStyleBertVITS2"
+    "com.ustyle.bert-vits2": "https://github.com/ayutaz/uStyle-Bert-VITS2.git?path=Assets/uStyleBertVITS2"
   }
 }
 ```
 
-> **Note**: Dependencies (Sentis, UniTask, ZString, ONNX Runtime) must be installed separately.
+> **Note**: Sentis is resolved as a package dependency. UniTask / ZString / ONNX Runtime must be installed separately.
 
 ### Place model files
 
@@ -76,7 +77,6 @@ StreamingAssets/uStyleBertVITS2/
     sbv2_model.onnx          # SynthesizerTrn (FP16 recommended)
     deberta_model.onnx        # DeBERTa for Sentis (FP32, int32)
     deberta_for_ort.onnx      # DeBERTa for ORT (FP32, int64) *ORT only
-  StyleVectors/
     style_vectors.npy         # Style vectors
   OpenJTalkDic/               # NAIST JDIC dictionary (8 files)
     char.bin, left-id.def, matrix.bin, pos-id.def,
@@ -90,7 +90,7 @@ StreamingAssets/uStyleBertVITS2/
 >
 > ```bash
 > cd scripts && uv sync
-> uv run convert_sbv2_for_sentis.py --repo-id <hf-repo-id> --no-fp16 --no-simplify
+> uv run convert_sbv2_for_sentis.py --repo <hf-repo-id> --no-fp16 --no-simplify
 > ```
 >
 > `deberta_for_ort.onnx` for ORT requires a different conversion from the Sentis version (int64 preserved, FP32 output with Cast).
@@ -207,7 +207,7 @@ cd scripts
 uv sync
 
 # Batch conversion from HuggingFace model
-uv run convert_sbv2_for_sentis.py --repo-id <hf-repo-id> --no-fp16 --no-simplify
+uv run convert_sbv2_for_sentis.py --repo <hf-repo-id> --no-fp16 --no-simplify
 
 # Individual conversion
 uv run convert_for_sentis.py <model_path>          # SynthesizerTrn
@@ -266,7 +266,12 @@ Ensure you are running on Windows x86_64. macOS / Linux are not supported.
 
 ## Contributing
 
-Issues and Pull Requests are welcome. Please report bugs and feature requests via [GitHub Issues](https://github.com/<owner>/uStyle-Bert-VITS2/issues).
+Issues and Pull Requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for details.  
+Please report bugs and feature requests via [GitHub Issues](https://github.com/ayutaz/uStyle-Bert-VITS2/issues).
+
+## Security
+
+For vulnerability reporting policy, see [SECURITY.md](SECURITY.md).
 
 ## Acknowledgements
 
@@ -285,4 +290,4 @@ Issues and Pull Requests are welcome. Please report bugs and feature requests vi
 
 Apache License 2.0 — See [LICENSE](LICENSE) for details.
 
-Model weights are subject to the original [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) license.
+Third-party assets (models/dictionaries) may have separate licenses and terms. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for details.

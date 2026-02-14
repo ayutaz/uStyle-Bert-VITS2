@@ -1,68 +1,63 @@
-# Third-Party Notices
+# サードパーティーに関するお知らせ
 
-This repository's source code is licensed under Apache License 2.0.  
-Some runtime assets and model-related artifacts may be governed by separate licenses and terms.
+このリポジトリのソースコードは Apache License 2.0 で提供されています。  
+ただし、実行時アセットやモデル関連資材には、別途ライセンス・利用規約が適用される場合があります。
 
-## 1. Style-Bert-VITS2 (reference implementation)
+## 1. Style-Bert-VITS2（参照実装）
 
-- Upstream: https://github.com/litagin02/Style-Bert-VITS2
-- License (upstream repository): AGPL-3.0
-- Usage here: architecture/reference implementation and ONNX conversion workflow reference
+- 上流リポジトリ: https://github.com/litagin02/Style-Bert-VITS2
+- 上流ライセンス: AGPL-3.0
+- 本リポジトリでの扱い: アーキテクチャおよび ONNX 変換手順の参照
 
-## 2. Tsukuyomi-chan corpus and derived TTS model terms
+## 2. つくよみちゃん関連（コーパス・キャラクター規約）
 
-- Upstream model used in this project context:
+- 本プロジェクト文脈で利用する上流モデル:
   - https://huggingface.co/ayousanz/tsukuyomi-chan-style-bert-vits2-model
-- Hugging Face model card license field: `other` (non-standard license field)
-- Primary rights holder/project references:
-  - Tsukuyomi-chan corpus page and terms: https://tyc.rei-yumesaki.net/material/corpus/
-  - Tsukuyomi-chan character license: https://tyc.rei-yumesaki.net/about/terms/
-  - Credit notation guidance: https://tyc.rei-yumesaki.net/about/terms/credit/
-  - The official pages above note recent revisions (character license: 2025-09-26, corpus terms update: 2025-11-18).
+- Hugging Face のモデルカード上のライセンス表記:
+  - `other`（標準 SPDX ではない独自規約系）
+- 公式規約ページ:
+  - つくよみちゃんコーパス: https://tyc.rei-yumesaki.net/material/corpus/
+  - つくよみちゃんキャラクターライセンス: https://tyc.rei-yumesaki.net/about/terms/
+  - クレジット表記ガイド: https://tyc.rei-yumesaki.net/about/terms/credit/
 
-### Practical compliance requirements (important)
+### 実運用上の要点（要約）
 
-When distributing apps, APIs, models, or services that expose Tsukuyomi-chan voice characteristics to third parties:
+以下は公式ページの要点を抜粋した実務向けメモです。最終判断は必ず公式規約本文で行ってください。
 
-1. Credit/attribution is required by the corpus terms when distributing software/services that expose this voice.
-2. Distribution of voice-synthesis/voice-conversion software based on this corpus is generally limited to free distribution under the corpus terms (check official exceptions and details).
-3. Commercial use of AI models learned from this corpus may require prior inquiry/approval from the rights holder under the corpus terms.
-4. For paid APIs/services (where allowed), required credit information must be visible before purchase/payment.
-5. If character visuals/design (illustrations, avatar, 3D model, etc.) are used, comply with the character license and related credit rules in addition to corpus terms.
-6. Direct use of the corpus itself as raw material for music/video assets is not allowed under the corpus terms.
-7. Redistribution of the corpus itself is generally prohibited (except limited exceptional cases defined by the official terms).
-8. Redistribution/sale of synthesized voice data as reusable material is generally prohibited unless separately permitted by the rights holder.
-9. Content/use categories restricted by the character license (for example, certain political/religious/ideological advocacy or attack-oriented use) must be respected.
-10. Terms may be revised; always verify the latest official pages before release.
+1. つくよみちゃんコーパスの声質を第三者が利用可能な形で公開する場合、クレジット表記が必須です。
+2. 有料で公開する場合、必要なクレジット情報は「支払い前に確認できる場所」にも表示が必要です。
+3. コーパス本体の再配布は原則禁止です（例外は公式規約に従う）。
+4. コーパス声質で合成した音声を「素材として再配布・販売」する行為は原則禁止です。
+5. コーパス自体を音楽・動画素材として利用することは不可です（詳細はコーパス規約参照）。
+6. キャラクター利用時は、政治・宗教・思想への賛否呼びかけ、実在対象への批判・攻撃など、キャラクターライセンス上の禁止事項を遵守してください。
+7. キャラクターデザイン（立ち絵・イラスト等）を併用する場合は、キャラクターライセンスとクレジット規定もあわせて遵守してください。
+8. 規約は更新される可能性があるため、公開・配布前に公式ページの最新内容を再確認してください。
 
-### Suggested attribution block (non-normative template)
+### クレジット記載について
 
-Use the official credit examples on the linked pages. A minimal project-level attribution reference is:
+クレジットの具体的な文面は、公式の「クレジット表記について」に用途別の例文があります。  
+本プロジェクトで配布するアプリ/API/モデルの公開時は、必ず上記公式ページの最新例文に合わせてください。
 
-- Voice corpus: Tsukuyomi-chan Corpus (CV: Rei Yumesaki)
-- Source: https://tyc.rei-yumesaki.net/material/corpus/
-- Character/project: Tsukuyomi-chan / Rei Yumesaki
+本項の要約は法的助言ではありません。公式規約本文が常に優先されます。
 
-This summary is not a substitute for the official terms. The official pages above take precedence.
+## 3. 日本語 DeBERTa 元モデル
 
-## 3. Japanese DeBERTa source model
+- 上流モデル: https://huggingface.co/ku-nlp/deberta-v2-large-japanese-char-wwm
+- ライセンス: CC BY-SA 4.0
 
-- Upstream model: https://huggingface.co/ku-nlp/deberta-v2-large-japanese-char-wwm
-- License: CC BY-SA 4.0
+## 4. OpenJTalk / NAIST 辞書
 
-## 4. OpenJTalk / NAIST dictionary
+- 上流: https://github.com/r9y9/open_jtalk
+- 辞書パス: `src/mecab-naist-jdic`
+- ライセンス本文: https://raw.githubusercontent.com/r9y9/open_jtalk/master/src/mecab-naist-jdic/COPYING
 
-- Upstream: https://github.com/r9y9/open_jtalk
-- Dictionary path: `src/mecab-naist-jdic`
-- License text: https://raw.githubusercontent.com/r9y9/open_jtalk/master/src/mecab-naist-jdic/COPYING
-
-## 5. ONNX Runtime and DirectML binaries
+## 5. ONNX Runtime / DirectML バイナリ
 
 - ONNX Runtime: https://github.com/microsoft/onnxruntime
 - DirectML: https://github.com/microsoft/DirectML
-- Distributed binaries must follow each upstream project's redistribution terms.
+- 再配布時は各上流プロジェクトの再配布条件に従ってください。
 
-## Notes
+## 注意
 
-- If multiple licenses/terms apply to your distribution, comply with all applicable conditions.
-- This file is a technical attribution summary, not legal advice.
+- 複数のライセンス・規約が重なる場合は、適用される条件をすべて満たす必要があります。
+- 本ファイルは技術的なライセンス整理のための要約であり、法的助言ではありません。

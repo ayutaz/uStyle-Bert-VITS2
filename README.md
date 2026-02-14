@@ -7,6 +7,7 @@
 
 [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) 系の日本語TTSモデルを Unity で実行するライブラリです。  
 ONNX モデルを [Unity Sentis](https://docs.unity3d.com/Packages/com.unity.ai.inference@2.5/manual/index.html) または [ONNX Runtime + DirectML](https://github.com/asus4/onnxruntime-unity) で推論します。
+Issue 報告: https://github.com/ayutaz/uStyle-Bert-VITS2/issues
 
 ## Demo
 

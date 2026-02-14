@@ -7,6 +7,7 @@
 
 A Unity library for running [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) Japanese TTS models in real time.  
 ONNX models run on [Unity Sentis](https://docs.unity3d.com/Packages/com.unity.ai.inference@2.5/manual/index.html) or [ONNX Runtime + DirectML](https://github.com/asus4/onnxruntime-unity).
+Issue reporting: https://github.com/ayutaz/uStyle-Bert-VITS2/issues
 
 ## Demo
 

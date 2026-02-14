@@ -75,7 +75,7 @@ uv sync
 uv run convert_sbv2_for_sentis.py --repo <hf-repo-id> --no-fp16 --no-simplify
 ```
 
-For details, see `docs/01_onnx_export.md`.
+For details, see [docs/01_onnx_export.md](docs/01_onnx_export.md).
 
 ### 4) Create `TTSSettings`
 
@@ -137,17 +137,17 @@ For detailed benchmarks, see [docs/05_performance_optimization.md](docs/05_perfo
 ## More Docs
 
 - Release notes: [CHANGELOG.md](CHANGELOG.md)
-- Implementation roadmap: `docs/00_implementation_roadmap.md`
-- ONNX conversion: `docs/01_onnx_export.md`
-- Unity/Sentis integration: `docs/03_unity_sentis_integration.md`
-- Architecture details: `docs/04_architecture_design.md`
-- Performance optimization: `docs/05_performance_optimization.md`
-- C# optimization: `docs/06_csharp_optimization.md`
-- Contributing: `CONTRIBUTING.md`
-- Security policy: `SECURITY.md`
-- Third-party notices: `THIRD_PARTY_NOTICES.md`
+- Implementation roadmap: [docs/00_implementation_roadmap.md](docs/00_implementation_roadmap.md)
+- ONNX conversion: [docs/01_onnx_export.md](docs/01_onnx_export.md)
+- Unity/Sentis integration: [docs/03_unity_sentis_integration.md](docs/03_unity_sentis_integration.md)
+- Architecture details: [docs/04_architecture_design.md](docs/04_architecture_design.md)
+- Performance optimization: [docs/05_performance_optimization.md](docs/05_performance_optimization.md)
+- C# optimization: [docs/06_csharp_optimization.md](docs/06_csharp_optimization.md)
+- Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security policy: [SECURITY.md](SECURITY.md)
+- Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 ## License
 
-Apache License 2.0: `LICENSE`  
-Third-party assets (models/dictionaries) may have separate terms. See `THIRD_PARTY_NOTICES.md`.
+Apache License 2.0: [LICENSE](LICENSE)  
+Third-party assets (models/dictionaries) may have separate terms. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

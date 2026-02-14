@@ -75,7 +75,7 @@ uv sync
 uv run convert_sbv2_for_sentis.py --repo <hf-repo-id> --no-fp16 --no-simplify
 ```
 
-詳細は `docs/01_onnx_export.md` を参照してください。
+詳細は [docs/01_onnx_export.md](docs/01_onnx_export.md) を参照してください。
 
 ### 4) `TTSSettings` を作成
 
@@ -137,17 +137,17 @@ pipeline.Dispose();
 ## More Docs
 
 - リリースノート: [CHANGELOG.md](CHANGELOG.md)
-- 実装方針: `docs/00_implementation_roadmap.md`
-- ONNX変換: `docs/01_onnx_export.md`
-- Unity/Sentis統合: `docs/03_unity_sentis_integration.md`
-- アーキテクチャ詳細: `docs/04_architecture_design.md`
-- 性能最適化: `docs/05_performance_optimization.md`
-- C#最適化: `docs/06_csharp_optimization.md`
-- 貢献方法: `CONTRIBUTING.md`
-- セキュリティ報告: `SECURITY.md`
-- サードパーティライセンス: `THIRD_PARTY_NOTICES.md`
+- 実装方針: [docs/00_implementation_roadmap.md](docs/00_implementation_roadmap.md)
+- ONNX変換: [docs/01_onnx_export.md](docs/01_onnx_export.md)
+- Unity/Sentis統合: [docs/03_unity_sentis_integration.md](docs/03_unity_sentis_integration.md)
+- アーキテクチャ詳細: [docs/04_architecture_design.md](docs/04_architecture_design.md)
+- 性能最適化: [docs/05_performance_optimization.md](docs/05_performance_optimization.md)
+- C#最適化: [docs/06_csharp_optimization.md](docs/06_csharp_optimization.md)
+- 貢献方法: [CONTRIBUTING.md](CONTRIBUTING.md)
+- セキュリティ報告: [SECURITY.md](SECURITY.md)
+- サードパーティライセンス: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 ## License
 
-Apache License 2.0: `LICENSE`  
-モデルや辞書など第三者由来アセットの条件は `THIRD_PARTY_NOTICES.md` を参照してください。
+Apache License 2.0: [LICENSE](LICENSE)  
+モデルや辞書など第三者由来アセットの条件は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。

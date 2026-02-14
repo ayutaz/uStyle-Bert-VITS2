@@ -13,8 +13,6 @@ Issue 報告: https://github.com/ayutaz/uStyle-Bert-VITS2/issues
 
 [![uStyle-Bert-VITS2 Demo](https://img.youtube.com/vi/zooXK0Arm24/hqdefault.jpg)](https://youtu.be/zooXK0Arm24)
 
-Video: https://youtu.be/zooXK0Arm24
-
 ## Features
 
 - Unity内で完結する C# パイプライン（G2P -> BERT -> TTS）

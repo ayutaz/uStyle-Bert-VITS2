@@ -5,7 +5,7 @@
 | モデル | 変換元 | 推奨精度 | 推定サイズ |
 |---|---|---|---|
 | SynthesizerTrn (メインTTS) | `*.safetensors` | FP16 | ~200-400MB |
-| DeBERTa-v2-large-japanese | `ku-nlp/deberta-v2-large-japanese-char-wwm` | FP16 | ~600MB |
+| DeBERTa-v2-large-japanese | `ku-nlp/deberta-v2-large-japanese-char-wwm` | FP32 | ~600-1200MB |
 
 JP-Extra版のため BERT入力は `bert` 単一入力のみ（通常モデルの `ja_bert`/`bert`/`en_bert` 3入力ではない）。
 
@@ -153,7 +153,7 @@ convert_int64_to_int32(model_simplified)
 
 # 6. FP16変換
 model_fp16 = float16.convert_float_to_float16(model_simplified, keep_io_types=True)
-onnx.save(model_fp16, "sbv2_model_fp16.onnx")
+onnx.save(model_fp16, "sbv2_model.onnx")
 ```
 
 ### `scripts/convert_sbv2_for_sentis.py` — HuggingFaceからの一括変換
@@ -201,12 +201,13 @@ class DeBERTaWrapper(torch.nn.Module):
 
 ```
 Assets/
-  Models/
-    sbv2_model_fp16.onnx       # メインTTSモデル (~200-400MB)
-    deberta_fp16.onnx          # DeBERTaモデル (~600MB)
   StreamingAssets/
-    StyleVectors/
-      style_vectors.npy        # スタイルベクトル
+    uStyleBertVITS2/
+      Models/
+        sbv2_model.onnx        # メインTTSモデル (~200-400MB)
+        deberta_model.onnx     # DeBERTaモデル (Sentis用, FP32 int32)
+        deberta_for_ort.onnx   # DeBERTaモデル (ORT用, FP32 int64)
+        style_vectors.npy      # スタイルベクトル
 ```
 
 Unity Editorでインポートすると自動的に `.sentis` アセットに変換される（Sentis 2.5.0）。
@@ -223,6 +224,6 @@ Unity Editorでインポートすると自動的に `.sentis` アセットに変
 
 ## 注意事項
 
-- **DeBERTaのサイズ**: FP16で~600MB。GPUメモリ消費大。`BackendType.GPUCompute` 失敗時は `BackendType.CPU` フォールバックを検討
+- **DeBERTaのサイズ**: FP32で~600-1200MB（変換設定依存）。Sentisでは `BackendType.CPU` 前提、ORT+DirectMLでGPU推論を利用可能
 - **monolithic vs 分割**: まずmonolithic（1ファイル）で試す。Sentis互換性問題が出たら enc_p/dp/sdp/flow/dec/emb_g の6分割を検討
 - **FP16の`keep_io_types=True`**: 入出力はfloat32のまま、内部のみFP16にする。Sentisとのテンソル受け渡しが安定する

@@ -92,9 +92,9 @@ Assets/
         Tokenizer/
           vocab.json                 # DeBERTa語彙
         Models/
-          sbv2_model_fp16.onnx       # メインTTSモデル (~200-400MB)
-          deberta_fp16.onnx          # DeBERTaモデル (~600MB)
-        StyleVectors/
+          sbv2_model.onnx            # メインTTSモデル (~200-400MB)
+          deberta_model.onnx         # DeBERTaモデル (Sentis用, FP32 int32)
+          deberta_for_ort.onnx       # DeBERTaモデル (ORT用, FP32 int64)
           style_vectors.npy          # スタイルベクトル
 ```
 
@@ -388,7 +388,7 @@ namespace uStyleBertVITS2.Configuration
         [Header("Paths (relative to StreamingAssets)")]
         public string DictionaryPath = "uStyleBertVITS2/OpenJTalkDic";
         public string VocabPath = "uStyleBertVITS2/Tokenizer/vocab.json";
-        public string StyleVectorPath = "uStyleBertVITS2/StyleVectors/style_vectors.npy";
+        public string StyleVectorPath = "uStyleBertVITS2/Models/style_vectors.npy";
 
         [Header("Performance")]
         public bool EnableWarmup = true;

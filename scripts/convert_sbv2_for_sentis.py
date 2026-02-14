@@ -12,7 +12,7 @@ Style-Bert-VITS2 モデルを Sentis 互換 ONNX に変換するスクリプト
 使用方法:
     uv run python convert_sbv2_for_sentis.py \
         --repo ayousanz/tsukuyomi-chan-style-bert-vits2-model \
-        --output ../Assets/StreamingAssets/uStyleBertVITS2/Models/sbv2_model_fp16.onnx
+        --output ../Assets/StreamingAssets/uStyleBertVITS2/Models/sbv2_model.onnx
 
 前提:
     - scripts/_sbv2_src/ に Style-Bert-VITS2 リポジトリが clone 済み
@@ -348,7 +348,7 @@ def main():
     parser.add_argument(
         "--output",
         type=str,
-        default="../Assets/StreamingAssets/uStyleBertVITS2/Models/sbv2_model_fp16.onnx",
+        default="../Assets/StreamingAssets/uStyleBertVITS2/Models/sbv2_model.onnx",
         help="Output ONNX model path",
     )
     parser.add_argument(

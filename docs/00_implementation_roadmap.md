@@ -83,9 +83,10 @@ Phase 0: プロジェクト基盤 [Done]
 
 | ファイル | 説明 |
 |---|---|
-| `Assets/StreamingAssets/uStyleBertVITS2/Models/sbv2_model_fp16.onnx` | メインTTSモデル（~200-400MB） |
-| `Assets/StreamingAssets/uStyleBertVITS2/Models/deberta_fp16.onnx` | DeBERTaモデル（~600MB） |
-| `Assets/StreamingAssets/uStyleBertVITS2/StyleVectors/style_vectors.npy` | スタイルベクトル |
+| `Assets/StreamingAssets/uStyleBertVITS2/Models/sbv2_model.onnx` | メインTTSモデル（~200-400MB） |
+| `Assets/StreamingAssets/uStyleBertVITS2/Models/deberta_model.onnx` | DeBERTaモデル（Sentis用, FP32 int32） |
+| `Assets/StreamingAssets/uStyleBertVITS2/Models/deberta_for_ort.onnx` | DeBERTaモデル（ORT用, FP32 int64） |
+| `Assets/StreamingAssets/uStyleBertVITS2/Models/style_vectors.npy` | スタイルベクトル |
 | `Assets/StreamingAssets/uStyleBertVITS2/Tokenizer/vocab.json` | DeBERTaトークナイザ語彙 |
 | `Assets/StreamingAssets/uStyleBertVITS2/OpenJTalkDic/` | NAIST JDIC辞書（8ファイル） |
 | `Assets/uStyleBertVITS2/Plugins/Windows/x86_64/openjtalk_wrapper.dll` | OpenJTalkネイティブDLL |

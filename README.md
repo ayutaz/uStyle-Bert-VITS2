@@ -126,7 +126,7 @@ pipeline.Dispose();
 | BERT=Sentis CPU + TTS=GPU（初回） | ~969ms |
 | BERT=Sentis CPU + TTS=GPU（キャッシュ後） | ~621ms |
 
-詳細ベンチマークは `docs/05_performance_optimization.md` と `docs/06_csharp_optimization.md` を参照してください。
+詳細ベンチマークは [docs/05_performance_optimization.md](docs/05_performance_optimization.md) と [docs/06_csharp_optimization.md](docs/06_csharp_optimization.md) を参照してください。
 
 ## More Docs
 

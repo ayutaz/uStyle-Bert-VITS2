@@ -126,7 +126,7 @@ Measurement environment: Windows desktop (Editor)
 | BERT=Sentis CPU + TTS=GPU (initial) | ~969ms |
 | BERT=Sentis CPU + TTS=GPU (cached) | ~621ms |
 
-For detailed benchmarks, see `docs/05_performance_optimization.md` and `docs/06_csharp_optimization.md`.
+For detailed benchmarks, see [docs/05_performance_optimization.md](docs/05_performance_optimization.md) and [docs/06_csharp_optimization.md](docs/06_csharp_optimization.md).
 
 ## More Docs
 

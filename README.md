@@ -136,4 +136,5 @@ pipeline.Dispose();
 ## License
 
 Apache License 2.0: [LICENSE](LICENSE)  
+モデルの利用条件は、つくよみちゃんコーパス｜声優統計コーパス（JVSコーパス準拠）の規約に準じます。  
 モデルや辞書など第三者由来アセットの条件は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。

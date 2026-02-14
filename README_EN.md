@@ -136,4 +136,5 @@ For detailed benchmarks, see [docs/05_performance_optimization.md](docs/05_perfo
 ## License
 
 Apache License 2.0: [LICENSE](LICENSE)  
+Model usage terms follow the Tsukuyomi-chan Corpus / Voice Statistics Corpus (JVS-based) terms.  
 Third-party assets (models/dictionaries) may have separate terms. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

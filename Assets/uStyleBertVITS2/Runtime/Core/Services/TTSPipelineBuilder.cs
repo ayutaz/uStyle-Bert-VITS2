@@ -74,8 +74,10 @@ namespace uStyleBertVITS2.Services
                 {
 #if USBV2_DOTNET_G2P_AVAILABLE
                     G2PEngineType.DotNetG2P => new DotNetG2PJapaneseG2P(dictPath),
-#endif
+                    _ => new DotNetG2PJapaneseG2P(dictPath)
+#else
                     _ => new JapaneseG2P(dictPath)
+#endif
                 };
             }
 

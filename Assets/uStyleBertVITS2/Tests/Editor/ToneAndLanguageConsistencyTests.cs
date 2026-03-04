@@ -25,7 +25,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 0 };
             int[] a3 = { 0, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // pau=0, k=0, o=0, N=1, n=1, i=1, ch=1, i=1, w=1, a=1, pau=0
             Assert.AreEqual(0, tones[0], "pau should be 0");
@@ -56,7 +56,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 2, 2, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // pau=0, a=1, m=0, e=0, pau=0
             Assert.AreEqual(0, tones[0], "pau should be 0");
@@ -80,7 +80,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(1, tones[1], "i (1st mora) should be HIGH after FixPhoneTone shift");
@@ -104,7 +104,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 5, 0 };
             int[] a3 = { 0, 5, 4, 4, 3, 2, 2, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(0, tones[1], "o (1st mora) should be LOW");
@@ -129,7 +129,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 3, 3, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(0, tones[1], "i (1st mora) should be LOW");
@@ -156,7 +156,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 1, 2, 2, 1, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             // 句1: n=1 (HIGH after shift), a=1 (HIGH after shift), m=0 (LOW after shift), a=0 (LOW after shift)
@@ -181,7 +181,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(0, tones[1], "e (single mora) should be LOW");
@@ -205,7 +205,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a3 = { 0, 5, 5, 4, 3, 3, 2, 2, 1, 1,
                          0, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // 句1「こんにちは」: 平板型 → LOW, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH
             Assert.AreEqual(0, tones[0], "pau should be 0");
@@ -247,7 +247,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 0, 1, 0 };
             int[] a3 = { 0, 1, 0, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "sil should be 0");
             Assert.AreEqual(0, tones[2], "pau should be 0");
@@ -267,7 +267,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             for (int i = 0; i < tones.Length; i++)
             {
@@ -276,6 +276,7 @@ namespace uStyleBertVITS2.Tests.Editor
             }
         }
 
+#if !USBV2_DOTNET_G2P_AVAILABLE
         /// <summary>
         /// Python: LANGUAGE_ID_MAP["JP"] = 1
         /// </summary>
@@ -287,6 +288,7 @@ namespace uStyleBertVITS2.Tests.Editor
             Assert.IsNotNull(field, "JapaneseLanguageId field not found");
             Assert.AreEqual(1, (int)field.GetValue(null));
         }
+#endif
 
         /// <summary>
         /// Python: 先頭/末尾の境界トークンは PAD ("_", index 0) であること。
@@ -347,7 +349,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 0, 1, 2, 2, 3, 4, 4, 0 };
             int[] a3 = { 0, 1, 0, 4, 3, 3, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // 句1「え」: 単モーラ → 0
             Assert.AreEqual(0, tones[0], "pau");
@@ -380,7 +382,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 1, 2, 3, 4, 0 };
             int[] a3 = { 0, 5, 5, 4, 3, 2, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // 1st mora = LOW(0), rest = HIGH(1)
             Assert.AreEqual(0, tones[0], "pau");
@@ -414,7 +416,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 2, 0 };
             int[] a3 = { 0, 4, 3, 3, 3, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // d=1 (HIGH), e=0 (LOW), s=0, U=0
             Assert.AreEqual(0, tones[0], "pau");
@@ -446,7 +448,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // g=1 (HIGH), a=0, cl=0, k=0, o=0, u=0
             Assert.AreEqual(0, tones[0], "pau");
@@ -480,7 +482,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 1, 2, 0 };
             int[] a3 = { 0, 3, 3, 2, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // s=0 (1st mora LOW), a=0 (1st mora), N=1 (2nd mora HIGH)
             Assert.AreEqual(0, tones[0], "pau");
@@ -512,7 +514,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 0, 1, 2, 0 };
             int[] a3 = { 0, 1, 0, 2, 2, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // 句1: i=0
             Assert.AreEqual(0, tones[0], "pau");
@@ -546,7 +548,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 0 };
             int[] a3 = { 0, 5, 5, 4, 4, 3, 3, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // 検証: 最初の音素は LOW, 中間で HIGH, 最後は LOW の遷移
             Assert.AreEqual(0, tones[0], "pau");

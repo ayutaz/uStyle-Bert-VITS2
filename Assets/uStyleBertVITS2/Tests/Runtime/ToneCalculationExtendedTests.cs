@@ -40,7 +40,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 0 };
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[0], "pau");
             Assert.AreEqual(0, tones[1], "a = LOW (single mora heiban)");
             Assert.AreEqual(0, tones[2], "pau");
@@ -57,7 +57,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // k: a2==1, a2Next==1 (same mora) → no [ yet
             // a: a2==1, a2Next==2 → [ → currentTone=1
             // z: tone=1, e: tone=1
@@ -79,7 +79,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 1, 2, 2, 3, 3, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "s = LOW");
             Assert.AreEqual(0, tones[2], "a = LOW");
             Assert.AreEqual(1, tones[3], "k = HIGH");
@@ -97,7 +97,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -4, -4, -3, -2, -2, -1, -1, 0, 0, 0 };
             int[] a2 = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 0 };
             int[] a3 = { 0, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "k = LOW");
             Assert.AreEqual(0, tones[2], "o = LOW");
             Assert.AreEqual(1, tones[3], "N = HIGH");
@@ -121,7 +121,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 0 };
             int[] a2 = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 0 };
             int[] a3 = { 0, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "1st mora = LOW");
             for (int i = 2; i <= 8; i++)
                 Assert.AreEqual(1, tones[i], $"mora {i} = HIGH");
@@ -136,7 +136,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 1, 2, 2, 0 };
             int[] a2 = { 0, 0, 1, 1, 2, 2, 0 };
             int[] a3 = { 0, 0, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[0], "pau");
             Assert.AreEqual(0, tones[1], "pau");
             Assert.AreEqual(0, tones[2], "t = LOW (1st mora)");
@@ -155,7 +155,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "k = LOW");
             Assert.AreEqual(1, tones[3], "k = HIGH");
             Assert.AreEqual(1, tones[4], "i = HIGH (final, no drop)");
@@ -169,7 +169,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 1, 2, 2, 3, 3, 4, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 3, 3, 4, 0 };
             int[] a3 = { 0, 4, 4, 3, 3, 2, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "t = LOW");
             Assert.AreEqual(0, tones[2], "o = LOW");
             Assert.AreEqual(1, tones[3], "m = HIGH");
@@ -201,7 +201,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "a = HIGH (atamadaka)");
             Assert.AreEqual(0, tones[2], "m = LOW");
             Assert.AreEqual(0, tones[3], "e = LOW");
@@ -216,7 +216,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "i = HIGH");
             Assert.AreEqual(0, tones[2], "n = LOW");
             Assert.AreEqual(0, tones[3], "o = LOW");
@@ -242,7 +242,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 1, 1, 2, 2, 3, 3, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 3, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 4, 3, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "m = HIGH (1st mora)");
             Assert.AreEqual(1, tones[2], "e = HIGH (1st mora)");
             Assert.AreEqual(0, tones[3], "g = LOW (2nd mora)");
@@ -260,7 +260,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 2, 3, 4, 0 };
             int[] a2 = { 0, 1, 2, 3, 4, 5, 0 };
             int[] a3 = { 0, 5, 4, 3, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "a = HIGH (1st)");
             Assert.AreEqual(0, tones[2], "i = LOW (2nd)");
             Assert.AreEqual(0, tones[3], "u = LOW");
@@ -278,7 +278,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 0 };
             int[] a2 = { 0, 1, 2, 0 };
             int[] a3 = { 0, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "e = HIGH after shift");
             Assert.AreEqual(0, tones[2], "a = LOW after shift");
         }
@@ -294,7 +294,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 1, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 3, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "k = HIGH");
             Assert.AreEqual(1, tones[2], "a = HIGH");
             Assert.AreEqual(0, tones[3], "cl = LOW");
@@ -314,7 +314,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 1, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 3, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "k = HIGH");
             Assert.AreEqual(1, tones[2], "a = HIGH");
             Assert.AreEqual(0, tones[3], "N = LOW");
@@ -331,7 +331,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[0], "sil = 0");
             Assert.AreEqual(1, tones[1], "a = HIGH");
             Assert.AreEqual(0, tones[2], "m = LOW");
@@ -354,7 +354,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, -1, 0, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "k = LOW (1st)");
             Assert.AreEqual(0, tones[2], "o = LOW (1st)");
             Assert.AreEqual(1, tones[3], "k = HIGH (2nd)");
@@ -376,7 +376,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, 0, 0, 1, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 3, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = LOW (1st)");
             Assert.AreEqual(1, tones[2], "t = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "a = HIGH (2nd)");
@@ -399,7 +399,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -2, -1, -1, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 3, 3, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "o = LOW (1st)");
             Assert.AreEqual(1, tones[2], "t = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "o = HIGH (2nd)");
@@ -422,7 +422,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -2, -1, 0, 1, 2, 0 };
             int[] a2 = { 0, 1, 2, 3, 4, 5, 0 };
             int[] a3 = { 0, 5, 4, 3, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = LOW (1st)");
             Assert.AreEqual(1, tones[2], "i = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "u = HIGH (3rd)");
@@ -445,7 +445,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -3, -2, -1, 0, 1, 2, 0 };
             int[] a2 = { 0, 1, 2, 3, 4, 5, 6, 0 };
             int[] a3 = { 0, 6, 5, 4, 3, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = LOW (1st)");
             Assert.AreEqual(1, tones[2], "i = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "u = HIGH (3rd)");
@@ -463,7 +463,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, -1, 0, 0, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 4, 3, 3, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "h = LOW (1st)");
             Assert.AreEqual(0, tones[2], "I = LOW (1st, voiceless)");
             Assert.AreEqual(1, tones[3], "k = HIGH (2nd)");
@@ -481,7 +481,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, 0, 0, 1, 2, 2, 3, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 5, 0 };
             int[] a3 = { 0, 5, 4, 4, 3, 2, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "o = LOW (1st)");
             Assert.AreEqual(1, tones[2], "n = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "i = HIGH (2nd)");
@@ -498,7 +498,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -2, -1, -1, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 3, 3, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "i = LOW");
             Assert.AreEqual(1, tones[2], "m = HIGH");
             Assert.AreEqual(1, tones[3], "o = HIGH");
@@ -532,7 +532,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, 0, 0, 0 };
             int[] a2 = { 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = LOW (1st)");
             Assert.AreEqual(1, tones[2], "m = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "e = HIGH (2nd)");
@@ -550,7 +550,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -2, -1, -1, 0, 0, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "o = LOW (1st)");
             Assert.AreEqual(1, tones[2], "t = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "o = HIGH (2nd)");
@@ -571,7 +571,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -3, -2, -2, -1, 0, 0, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 3, 3, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "i = LOW (1st)");
             Assert.AreEqual(1, tones[2], "m = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "o = HIGH (2nd)");
@@ -591,7 +591,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -2, -1, -1, 0, 0, 0, 0, 0, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0, 1, 1, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "o = LOW");
             Assert.AreEqual(1, tones[2], "t = HIGH");
             Assert.AreEqual(1, tones[5], "o = HIGH (last, odaka)");
@@ -609,7 +609,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -4, -3, -2, -1, 0, 0 };
             int[] a2 = { 0, 1, 2, 3, 4, 5, 0 };
             int[] a3 = { 0, 5, 4, 3, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = LOW (1st)");
             Assert.AreEqual(1, tones[2], "i = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "u = HIGH (3rd)");
@@ -629,11 +629,11 @@ namespace uStyleBertVITS2.Tests
             int[] a1Odaka = { 0, -1, 0, 0, 0 };
             int[] a2 = { 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 1, 1, 0 };
-            int[] tonesOdaka = JapaneseG2P.ComputeTonesFromProsody(phOdaka, a1Odaka, a2, a3, phOdaka.Length);
+            int[] tonesOdaka = ProsodyToneCalculator.ComputeTonesFromProsody(phOdaka, a1Odaka, a2, a3, phOdaka.Length);
 
             string[] phHeiban = { "pau", "a", "m", "e", "pau" };
             int[] a1Heiban = { 0, 1, 2, 2, 0 };
-            int[] tonesHeiban = JapaneseG2P.ComputeTonesFromProsody(phHeiban, a1Heiban, a2, a3, phHeiban.Length);
+            int[] tonesHeiban = ProsodyToneCalculator.ComputeTonesFromProsody(phHeiban, a1Heiban, a2, a3, phHeiban.Length);
 
             // Both should be LOW, HIGH, HIGH
             Assert.AreEqual(0, tonesOdaka[1]);
@@ -655,7 +655,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 1, 2, 2, 0, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 0, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // 句1: LOW, LOW, HIGH, HIGH
             Assert.AreEqual(0, tones[1], "k = LOW (phrase1)");
             Assert.AreEqual(1, tones[3], "z = HIGH (phrase1)");
@@ -674,7 +674,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 0, 0, 0, 0 };
             int[] a2 = { 0, 1, 0, 1, 0, 1, 0 };
             int[] a3 = { 0, 1, 0, 1, 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = LOW");
             Assert.AreEqual(0, tones[3], "i = LOW");
             Assert.AreEqual(0, tones[5], "u = LOW");
@@ -691,7 +691,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 1, 2, 2, 3, 3, 0, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 3, 3, 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 3, 3, 2, 2, 1, 1, 0, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // 句1: LOW, LOW, HIGH, HIGH, HIGH, HIGH
             Assert.AreEqual(0, tones[1], "s = LOW");
             Assert.AreEqual(1, tones[3], "k = HIGH");
@@ -710,7 +710,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, 0, 0, 1, 1, 0, 1, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0, 1, 1, 2, 2, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // 句1: LOW, HIGH, HIGH, LOW, LOW
             Assert.AreEqual(0, tones[1], "a = LOW (1st)");
             Assert.AreEqual(1, tones[2], "k = HIGH (2nd)");
@@ -733,7 +733,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 1, 1, 0, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 1, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "n = HIGH (phrase1)");
             Assert.AreEqual(1, tones[2], "a = HIGH (phrase1)");
             Assert.AreEqual(0, tones[3], "m = LOW (phrase1)");
@@ -751,7 +751,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 0, 1, 2, 0 };
             int[] a2 = { 0, 1, 2, 0, 1, 2, 0 };
             int[] a3 = { 0, 2, 1, 0, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "a = HIGH (phrase1 atamadaka)");
             Assert.AreEqual(0, tones[2], "i = LOW (phrase1)");
             Assert.AreEqual(0, tones[4], "u = LOW (phrase2 heiban 1st)");
@@ -766,7 +766,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 0, 0, 0 };
             int[] a2 = { 0, 1, 0, 0, 1, 0 };
             int[] a3 = { 0, 1, 0, 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[0], "pau");
             Assert.AreEqual(0, tones[1], "a = LOW");
             Assert.AreEqual(0, tones[2], "pau");
@@ -793,7 +793,7 @@ namespace uStyleBertVITS2.Tests
             int[] a2 = { 0, 1, 2, 1, 0 };
             int[] a3 = { 0, 2, 1, 1, 0 };
             // i=2 (k): a3==1, a2Next==a2[3]==1 → # condition: IsVowelOrNOrCl("k") → false → # NOT triggered
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph2, a1, a2, a3, ph2.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph2, a1, a2, a3, ph2.Length);
             // Without #, all in one phrase
             // a(0): tone=0, [ at a2==1 && a2Next==2 → tone=1? a2[1]==1, a2Next=a2[2]==2 → yes → tone=1
             // k(1): tone=1. a1[2]==1≠0 → no ]. a2[2]==2≠1 → no [. a3[2]==1, a2Next==1, IsVowel(k)=false → no #
@@ -816,7 +816,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0 };
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "e = LOW (single mora question)");
             AssertAllBinary(tones, ph);
         }
@@ -834,7 +834,7 @@ namespace uStyleBertVITS2.Tests
                          0, 1, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 4, 4, 3, 2, 2, 1,
                          0, 3, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // 句1: heiban → LOW, LOW, HIGH, HIGH, HIGH, HIGH
             Assert.AreEqual(0, tones[1], "h = LOW");
             Assert.AreEqual(1, tones[3], "N = HIGH");
@@ -853,7 +853,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, -1, 0, 0, 1, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 3, 0 };
             int[] a3 = { 0, 3, 3, 2, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "s = LOW (1st)");
             Assert.AreEqual(0, tones[2], "u = LOW (1st)");
             Assert.AreEqual(1, tones[3], "g = HIGH (2nd)");
@@ -873,7 +873,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { };
             int[] a2 = { };
             int[] a3 = { };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, 0);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, 0);
             Assert.AreEqual(0, tones.Length);
         }
 
@@ -884,7 +884,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0 };
             int[] a2 = { 0 };
             int[] a3 = { 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones.Length);
             Assert.AreEqual(0, tones[0], "sil = 0");
         }
@@ -896,7 +896,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0 };
             int[] a2 = { 0 };
             int[] a3 = { 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones.Length);
             Assert.AreEqual(0, tones[0], "pau = 0");
         }
@@ -909,7 +909,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0 };
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[0], "sil = 0");
             Assert.AreEqual(0, tones[1], "a = LOW (single)");
             Assert.AreEqual(0, tones[2], "sil = 0");
@@ -922,7 +922,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 0 };
             int[] a2 = { 0, 0, 0, 0 };
             int[] a3 = { 0, 0, 0, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(4, tones.Length);
             foreach (int t in tones)
                 Assert.AreEqual(0, t);
@@ -936,7 +936,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0, 0, 0, 0 };
             int[] a2 = { 0, 1, 2, 0, 1, 2 };
             int[] a3 = { 0, 2, 1, 0, 2, 1 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, 4);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, 4);
             Assert.AreEqual(4, tones.Length, "Should only process first 4");
             Assert.AreEqual(0, tones[0], "pau");
             Assert.AreEqual(0, tones[3], "pau");
@@ -967,7 +967,7 @@ namespace uStyleBertVITS2.Tests
             }
             ph[phCount - 1] = "pau"; a1[phCount - 1] = 0; a2[phCount - 1] = 0; a3[phCount - 1] = 0;
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, phCount);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, phCount);
             Assert.AreEqual(phCount, tones.Length);
             Assert.AreEqual(0, tones[0], "pau");
             // 1st mora LOW
@@ -990,7 +990,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0 };
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[0], "silB = 0");
             Assert.AreEqual(0, tones[1], "a = LOW");
             Assert.AreEqual(0, tones[2], "silE = 0");
@@ -1008,7 +1008,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0 };
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "cl = LOW (single)");
         }
 
@@ -1020,7 +1020,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0 };
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "N = LOW (single)");
         }
 
@@ -1032,7 +1032,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 2, 0 };
             int[] a2 = { 0, 1, 2, 0 };
             int[] a3 = { 0, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "cl = LOW (1st)");
             Assert.AreEqual(1, tones[2], "N = HIGH (2nd)");
         }
@@ -1067,7 +1067,7 @@ namespace uStyleBertVITS2.Tests
             int[] a24 = { 0, 1, 1, 2, 1, 1, 0 };
             int[] a34 = { 0, 2, 2, 1, 1, 1, 0 };
             // i=3 (A): a3[3]==1, a2Next=a2[4]==1, IsVowelOrNOrCl("A")=true → # triggered!
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph4, a14, a24, a34, ph4.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph4, a14, a24, a34, ph4.Length);
             // Phrase1: k(0), a(0), A → [ at a: a2==1, a2Next==2 → tone=1
             // A: tone=1. # triggered → FixPhoneTone({0, 0, 1}) → min=0, no shift → {0, 0, 1}
             Assert.AreEqual(0, tones[1], "k = LOW");
@@ -1090,7 +1090,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -3, -2, -1, 0, 0 };
             int[] a2 = { 0, 1, 2, 3, 4, 0 };
             int[] a3 = { 0, 4, 3, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "I = LOW (1st)");
             Assert.AreEqual(1, tones[2], "U = HIGH (2nd)");
             Assert.AreEqual(1, tones[3], "E = HIGH (3rd)");
@@ -1107,7 +1107,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 2, 3, 0 };
             int[] a2 = { 0, 1, 2, 3, 0 };
             int[] a3 = { 0, 3, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // k: a2==1, a2Next==2 → [ → tone=1
             Assert.AreEqual(0, tones[1], "k = LOW (before [)");
             Assert.AreEqual(1, tones[2], "s = HIGH");
@@ -1125,7 +1125,7 @@ namespace uStyleBertVITS2.Tests
             int[] a2 = { 0, 1, 1, 2, 1, 1, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 1, 0 };
             // i=3 (N): a3[3]==1, a2Next=a2[4]==1, IsVowelOrNOrCl("N")=true → # triggered
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // Phrase1: k(0), a(0) → [ at a: a2==1, a2Next==2 → tone=1. N(1).
             // # triggered → FixPhoneTone({0, 0, 1}) → {0, 0, 1}
             Assert.AreEqual(0, tones[1], "k = LOW (phrase1)");
@@ -1146,7 +1146,7 @@ namespace uStyleBertVITS2.Tests
             int[] a2 = { 0, 1, 1, 2, 1, 1, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 1, 0 };
             // i=3 (cl): a3==1, a2Next=a2[4]==1, IsVowelOrNOrCl("cl")=true → # triggered
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "k = LOW");
             Assert.AreEqual(0, tones[2], "a = LOW");
             Assert.AreEqual(1, tones[3], "cl = HIGH (triggers #)");
@@ -1167,7 +1167,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 1, 1, 2, 2, 0 };
             int[] a2 = { 0, 1, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1]);
             Assert.AreEqual(0, tones[2]);
             Assert.AreEqual(1, tones[3]);
@@ -1182,7 +1182,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, 0, 0, 1, 1, 0 };
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = LOW");
             Assert.AreEqual(1, tones[2], "k = HIGH");
             Assert.AreEqual(1, tones[3], "a = HIGH");
@@ -1200,7 +1200,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 1, 0 };
             int[] a2 = { 0, 1, 2, 0 };
             int[] a3 = { 0, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(1, tones[1], "a = HIGH (shifted)");
             Assert.AreEqual(0, tones[2], "i = LOW (shifted)");
         }
@@ -1219,7 +1219,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, -1, 0, 0 };
             int[] a2 = { 0, 1, 2, 0 };
             int[] a3 = { 0, 2, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             // {0, 1} → no shift needed
             Assert.AreEqual(0, tones[1], "a = LOW");
             Assert.AreEqual(1, tones[2], "i = HIGH");
@@ -1234,7 +1234,7 @@ namespace uStyleBertVITS2.Tests
             int[] a1 = { 0, 0, 0 };
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
             Assert.AreEqual(0, tones[1], "a = 0 (no shift for all-zero)");
         }
 
@@ -1250,7 +1250,7 @@ namespace uStyleBertVITS2.Tests
                          0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 0 };
             int[] a3 = { 0, 5, 5, 4, 3, 3, 2, 2, 1, 1,
                          0, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0 };
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(ph, a1, a2, a3, ph.Length);
 
             // 句1: 平板5モーラ
             int[] expected1 = { 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0 };

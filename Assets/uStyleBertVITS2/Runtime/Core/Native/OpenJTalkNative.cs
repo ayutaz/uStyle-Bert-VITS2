@@ -1,3 +1,4 @@
+#if !USBV2_DOTNET_G2P_AVAILABLE
 using System;
 using System.Runtime.InteropServices;
 
@@ -96,3 +97,4 @@ namespace uStyleBertVITS2.Native
         public static extern int openjtalk_get_last_error(IntPtr handle);
     }
 }
+#endif

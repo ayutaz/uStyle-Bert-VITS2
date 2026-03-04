@@ -9,6 +9,7 @@ using uStyleBertVITS2.TextProcessing;
 
 namespace uStyleBertVITS2.Tests
 {
+#if !USBV2_DOTNET_G2P_AVAILABLE
     /// <summary>
     /// dot-net-g2p と現行 JapaneseG2P の互換性テスト。
     /// 50+ テストケース（基本日本語、漢字混在、句読点、記号、長文、特殊）。
@@ -552,6 +553,7 @@ namespace uStyleBertVITS2.Tests
             _jg2p?.Dispose();
         }
     }
+#endif
 
 #if USBV2_DOTNET_G2P_AVAILABLE
     /// <summary>

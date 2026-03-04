@@ -13,6 +13,7 @@ using UnityEditor;
 
 namespace uStyleBertVITS2.Tests
 {
+#if !USBV2_DOTNET_G2P_AVAILABLE
     /// <summary>
     /// TTSPipeline E2Eテスト。
     /// 全コンポーネント(G2P + BERT + TTS + StyleVector)が必要。
@@ -109,4 +110,5 @@ namespace uStyleBertVITS2.Tests
             _pipeline = null;
         }
     }
+#endif
 }

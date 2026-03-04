@@ -5,6 +5,7 @@ using uStyleBertVITS2.Native;
 
 namespace uStyleBertVITS2.Tests
 {
+#if !USBV2_DOTNET_G2P_AVAILABLE
     [TestFixture]
     [Category("RequiresNativeDLL")]
     public class G2PTests
@@ -128,6 +129,7 @@ namespace uStyleBertVITS2.Tests
             _g2p?.Dispose();
         }
     }
+#endif
 
     /// <summary>
     /// SBV2PhonemeMapper 単体テスト（ネイティブDLL不要）。

@@ -15,6 +15,17 @@ namespace uStyleBertVITS2.Configuration
     }
 
     /// <summary>
+    /// G2P (Grapheme-to-Phoneme) エンジンの選択。
+    /// </summary>
+    public enum G2PEngineType
+    {
+        /// <summary>OpenJTalk P/Invoke を使用（ネイティブDLL必須）。</summary>
+        OpenJTalk = 0,
+        /// <summary>dot-net-g2p (Pure C#) を使用。</summary>
+        DotNetG2P = 1,
+    }
+
+    /// <summary>
     /// Style-Bert-VITS2 TTS設定。ScriptableObjectとしてInspectorから設定可能。
     /// </summary>
     [CreateAssetMenu(fileName = "TTSSettings", menuName = "uStyleBertVITS2/TTS Settings")]
@@ -26,6 +37,10 @@ namespace uStyleBertVITS2.Configuration
 
         [Tooltip("SynthesizerTrn ONNX model asset")]
         public ModelAsset TTSModel;
+
+        [Header("G2P")]
+        [Tooltip("G2Pエンジン (OpenJTalk=ネイティブDLL, DotNetG2P=Pure C#)")]
+        public G2PEngineType G2PEngine = G2PEngineType.OpenJTalk;
 
         [Header("Backend")]
         [Tooltip("BERT推論エンジン (Sentis=従来, OnnxRuntime=DirectML GPU推論)")]

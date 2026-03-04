@@ -20,6 +20,38 @@ namespace uStyleBertVITS2.Editor
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Validation", EditorStyles.boldLabel);
 
+            // G2P エンジン別バリデーション
+            if (settings.G2PEngine == G2PEngineType.DotNetG2P)
+            {
+#if !USBV2_DOTNET_G2P_AVAILABLE
+                EditorGUILayout.HelpBox(
+                    "dot-net-g2p パッケージ (com.dotnetg2p.core) がインストールされていません。\n" +
+                    "G2PEngineType.DotNetG2P は実行時にエラーになります。",
+                    MessageType.Error);
+#else
+                EditorGUILayout.HelpBox("G2P Engine: dot-net-g2p (Pure C#)", MessageType.Info);
+#endif
+                ValidatePath("G2P Dictionary", settings.DictionaryPath);
+            }
+            else
+            {
+                // OpenJTalk: ネイティブDLL の確認
+                string dllPath = System.IO.Path.Combine(
+                    Application.dataPath,
+                    "uStyleBertVITS2/Plugins/Windows/x86_64/openjtalk_wrapper.dll");
+                if (!System.IO.File.Exists(dllPath))
+                {
+                    EditorGUILayout.HelpBox(
+                        "G2P Engine: OpenJTalk (openjtalk_wrapper.dll not found)",
+                        MessageType.Warning);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("G2P Engine: OpenJTalk (Native)", MessageType.Info);
+                }
+                ValidatePath("G2P Dictionary", settings.DictionaryPath);
+            }
+
             // BERT エンジン別バリデーション
             if (settings.BertEngineType == BertEngine.Sentis)
             {

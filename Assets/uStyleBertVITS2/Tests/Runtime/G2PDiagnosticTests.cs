@@ -420,4 +420,155 @@ namespace uStyleBertVITS2.Tests
             }
         }
     }
+
+#if USBV2_DOTNET_G2P_AVAILABLE
+    /// <summary>
+    /// dot-net-g2p バックエンドの G2P 診断テスト。
+    /// G2PDiagnosticTests と同じケースを DotNetG2PJapaneseG2P で実行する。
+    /// </summary>
+    [TestFixture]
+    [Category("DotNetG2P")]
+    public class DotNetG2PDiagnosticTests
+    {
+        private DotNetG2PJapaneseG2P _g2p;
+        private SBV2PhonemeMapper _mapper;
+        private bool _available;
+
+        [OneTimeSetUp]
+        public void Setup()
+        {
+            _mapper = new SBV2PhonemeMapper();
+            string dictPath = System.IO.Path.Combine(
+                UnityEngine.Application.streamingAssetsPath,
+                "uStyleBertVITS2/OpenJTalkDic");
+            try
+            {
+                _g2p = new DotNetG2PJapaneseG2P(dictPath, _mapper);
+                _available = true;
+            }
+            catch (Exception e)
+            {
+                UnityEngine.Debug.LogWarning($"DotNetG2P diagnostic tests skipped: {e.Message}");
+                _available = false;
+            }
+        }
+
+        private void AssertAvailable()
+        {
+            if (!_available)
+                Assert.Ignore("DotNetG2P dictionary not available.");
+        }
+
+        private void DumpG2PResult(string text, G2PResult result)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"=== DotNetG2P Diagnostic: \"{text}\" ===");
+            sb.AppendLine($"PhonemeIds.Length = {result.PhonemeIds.Length}");
+
+            var symbols = SBV2PhonemeMapper.DefaultSymbols;
+            sb.Append("Phonemes: ");
+            for (int i = 0; i < result.PhonemeIds.Length; i++)
+            {
+                int id = result.PhonemeIds[i];
+                string name = id < symbols.Length ? symbols[id] : $"?{id}";
+                sb.Append(i > 0 ? $" {name}" : name);
+            }
+            sb.AppendLine();
+
+            sb.Append("Tones:    ");
+            for (int i = 0; i < result.Tones.Length; i++)
+            {
+                sb.Append(i > 0 ? $" {result.Tones[i]}" : $"{result.Tones[i]}");
+            }
+            sb.AppendLine();
+
+            sb.Append("Word2Ph:  [");
+            int w2pSum = 0;
+            for (int i = 0; i < result.Word2Ph.Length; i++)
+            {
+                sb.Append(i > 0 ? $", {result.Word2Ph[i]}" : $"{result.Word2Ph[i]}");
+                w2pSum += result.Word2Ph[i];
+            }
+            sb.AppendLine($"] (sum={w2pSum})");
+
+            UnityEngine.Debug.Log(sb.ToString());
+        }
+
+        [Test]
+        public void Konnichiwa_BasicDiagnostic()
+        {
+            AssertAvailable();
+            var result = _g2p.Process("こんにちは");
+            DumpG2PResult("こんにちは", result);
+
+            Assert.AreEqual(result.PhonemeIds.Length, result.Tones.Length);
+            Assert.AreEqual(result.PhonemeIds.Length, result.LanguageIds.Length);
+
+            int sum = 0;
+            foreach (int w in result.Word2Ph) sum += w;
+            Assert.AreEqual(result.PhonemeIds.Length, sum,
+                "word2ph合計がPhonemeIds.Lengthと一致すること");
+
+            foreach (int t in result.Tones)
+                Assert.IsTrue(t == 6 || t == 7, $"Tone should be 6 or 7 (JP offset), got {t}");
+
+            Assert.AreEqual(1, result.Word2Ph[2],
+                "\"ん\" should map to 1 phoneme (N)");
+        }
+
+        [Test]
+        public void TokyoTower_MixedScript()
+        {
+            AssertAvailable();
+            var result = _g2p.Process("東京タワー");
+            DumpG2PResult("東京タワー", result);
+
+            Assert.AreEqual(result.PhonemeIds.Length, result.Tones.Length);
+
+            int sum = 0;
+            foreach (int w in result.Word2Ph) sum += w;
+            Assert.AreEqual(result.PhonemeIds.Length, sum);
+
+            foreach (int t in result.Tones)
+                Assert.IsTrue(t == 6 || t == 7, $"Tone should be 6 or 7 (JP offset), got {t}");
+        }
+
+        [Test]
+        public void SingleChar_Minimal()
+        {
+            AssertAvailable();
+            var result = _g2p.Process("あ");
+            DumpG2PResult("あ", result);
+
+            Assert.IsTrue(result.PhonemeIds.Length >= 3,
+                $"Single char should produce at least 3 phonemes, got {result.PhonemeIds.Length}");
+
+            int sum = 0;
+            foreach (int w in result.Word2Ph) sum += w;
+            Assert.AreEqual(result.PhonemeIds.Length, sum);
+        }
+
+        [Test]
+        public void LongText_NoTruncation()
+        {
+            AssertAvailable();
+            string longText = "これは長い文章のテストです";
+            var result = _g2p.Process(longText);
+            DumpG2PResult(longText, result);
+
+            Assert.IsTrue(result.PhonemeIds.Length > 20,
+                $"Long text should produce >20 phonemes, got {result.PhonemeIds.Length}");
+
+            int sum = 0;
+            foreach (int w in result.Word2Ph) sum += w;
+            Assert.AreEqual(result.PhonemeIds.Length, sum);
+
+            foreach (int t in result.Tones)
+                Assert.IsTrue(t == 6 || t == 7, $"Tone should be 6 or 7 (JP offset), got {t}");
+        }
+
+        [OneTimeTearDown]
+        public void Teardown() { _g2p?.Dispose(); }
+    }
+#endif
 }

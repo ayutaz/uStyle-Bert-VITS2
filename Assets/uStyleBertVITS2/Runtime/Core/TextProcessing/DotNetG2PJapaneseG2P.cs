@@ -15,7 +15,7 @@ namespace uStyleBertVITS2.TextProcessing
     /// 1. TextNormalizer.Normalize() でテキスト正規化
     /// 2. G2PEngine.ToFullContextLabels() で HTS ラベル取得
     /// 3. HtsLabelParser で音素名・A1/A2/A3 抽出
-    /// 4. JapaneseG2P.ComputeTonesFromProsody() でトーン計算
+    /// 4. ProsodyToneCalculator.ComputeTonesFromProsody() でトーン計算
     /// 5. SBV2PhonemeMapper で音素ID変換
     /// 6. PhonemeCharacterAligner で word2ph 計算
     /// </summary>
@@ -79,8 +79,8 @@ namespace uStyleBertVITS2.TextProcessing
                 if (pid >= 0) punctQueue.Enqueue(pid);
             }
 
-            // プロソディからトーンを計算 (既存アルゴリズムを再利用)
-            int[] precomputedTones = JapaneseG2P.ComputeTonesFromProsody(
+            // プロソディからトーンを計算 (共有ユーティリティを使用)
+            int[] precomputedTones = ProsodyToneCalculator.ComputeTonesFromProsody(
                 rawPhonemes, a1Values, a2Values, a3Values, phonemeCount);
 
             // SBV2 形式に変換

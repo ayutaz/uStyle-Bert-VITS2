@@ -136,12 +136,12 @@ https://github.com/ayutaz/dot-net-g2p.git?path=src/DotNetG2P.MeCab
 
 **目的**: dot-net-g2p から既存のトーン計算アルゴリズムと同等の結果を得られることを確認する。
 
-| # | タスク | 完了条件 |
-|---|---|---|
-| 2-1 | HTS ラベルからの A1/A2/A3 パーサー実装 | `ToFullContextLabels()` → A1/A2/A3 int[] への変換 |
-| 2-2 | 既存 ComputeTonesFromProsody 12テスト通過 | 全テストケースで現行と同一のトーン値 |
-| 2-3 | 追加テーン検証 (50+ ケース) | 平板/頭高/中高/尾高 + 複合語 + 疑問文 |
-| 2-4 | FixPhoneTone 正規化の一致確認 | {-1,0}→{0,1} シフトが正しく発生 |
+| # | タスク | 完了条件 | ステータス |
+|---|---|---|---|
+| 2-1 | HTS ラベルからの A1/A2/A3 パーサー実装 | `ToFullContextLabels()` → A1/A2/A3 int[] への変換 | ✅ HtsLabelParser 実装済み |
+| 2-2 | 既存 ComputeTonesFromProsody 12テスト通過 | 全テストケースで現行と同一のトーン値 | ✅ 既存12テスト + 拡張7テスト通過 (ProsodyToneCalculator に抽出) |
+| 2-3 | 追加テーン検証 (50+ ケース) | 平板/頭高/中高/尾高 + 複合語 + 疑問文 | ✅ 50+ 追加トーン検証テスト作成 (ToneCalculationExtendedTests.cs) |
+| 2-4 | FixPhoneTone 正規化の一致確認 | {-1,0}→{0,1} シフトが正しく発生 | ✅ FixPhoneTone 正規化の一致確認 |
 
 **トーン計算アプローチ: C案を採用**
 
@@ -268,13 +268,13 @@ public sealed class DotNetG2PJapaneseG2P : IG2P
 
 ### Milestone 2: パイプライン統合
 
-| # | タスク | 変更ファイル |
-|---|---|---|
-| M2-1 | TTSPipelineBuilder のデフォルト G2P 差し替え | `Services/TTSPipelineBuilder.cs` |
-| M2-2 | manifest.json に UPM Git URL 追加 | `Packages/manifest.json` |
-| M2-3 | Runtime.asmdef にアセンブリ参照追加 | `uStyleBertVITS2.Runtime.asmdef` |
-| M2-4 | link.xml 追加 (IL2CPP 対応) | `Runtime/link.xml` (新規) |
-| M2-5 | TTSSettings に G2P バックエンド選択追加 (任意) | `Configuration/TTSSettings.cs` |
+| # | タスク | 変更ファイル | ステータス |
+|---|---|---|---|
+| M2-1 | TTSPipelineBuilder のデフォルト G2P 差し替え | `Services/TTSPipelineBuilder.cs` | ✅ TTSPipelineBuilder 更新 |
+| M2-2 | manifest.json に UPM Git URL 追加 | `Packages/manifest.json` | ✅ (Phase 0 で完了済み) |
+| M2-3 | Runtime.asmdef にアセンブリ参照追加 | `uStyleBertVITS2.Runtime.asmdef` | ✅ (Phase 0 で完了済み) |
+| M2-4 | link.xml 追加 (IL2CPP 対応) | `Runtime/link.xml` (新規) | ✅ (Phase 0 で完了済み) |
+| M2-5 | TTSSettings に G2P バックエンド選択追加 (任意) | `Configuration/TTSSettings.cs` | ✅ TTSSettings.G2PEngine 追加 |
 
 ---
 
@@ -370,8 +370,10 @@ public sealed class DotNetG2PJapaneseG2P : IG2P
 |---|---|
 | `TextProcessing/DotNetG2PJapaneseG2P.cs` | 新 G2P 実装 |
 | `TextProcessing/HtsLabelParser.cs` | HTS ラベル → A1/A2/A3 パーサー |
+| `TextProcessing/ProsodyToneCalculator.cs` | ComputeTonesFromProsody 共有ユーティリティ (Phase 2) |
 | `Runtime/link.xml` | IL2CPP ストリッピング防止 |
 | `Tests/Runtime/HtsLabelParserTests.cs` | パーサーテスト |
+| `Tests/Runtime/ToneCalculationExtendedTests.cs` | 50+ 追加トーン検証テスト (Phase 2) |
 | `Tests/Runtime/DotNetG2PCompatibilityTests.cs` | 互換性回帰テスト |
 
 ### 変更

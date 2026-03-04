@@ -1,0 +1,5 @@
+<linker>
+  <!-- Prevent IL2CPP from stripping dot-net-g2p internal classes -->
+  <assembly fullname="DotNetG2P" preserve="all"/>
+  <assembly fullname="DotNetG2P.MeCab" preserve="all"/>
+</linker>

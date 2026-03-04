@@ -8,7 +8,9 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "UniTask",
-        "UniTask.Linq"
+        "UniTask.Linq",
+        "DotNetG2P",
+        "DotNetG2P.MeCab"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

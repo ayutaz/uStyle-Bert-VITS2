@@ -24,7 +24,10 @@ Assets/
           TTSWarmup.cs               # 起動時ウォームアップ推論
         TextProcessing/
           IG2P.cs                    # G2Pインターフェース
-          JapaneseG2P.cs             # OpenJTalkベースG2P実装
+          JapaneseG2P.cs             # OpenJTalkベースG2P実装 (#if !USBV2_DOTNET_G2P_AVAILABLE)
+          DotNetG2PJapaneseG2P.cs    # dot-net-g2pベースG2P実装 (#if USBV2_DOTNET_G2P_AVAILABLE)
+          ProsodyToneCalculator.cs   # ComputeTonesFromProsody 共有ユーティリティ
+          HtsLabelParser.cs          # HTS full context label パーサー
           SBV2PhonemeMapper.cs       # OpenJTalk音素→SBV2トークンID
           SBV2Tokenizer.cs           # DeBERTa用文字レベルトークナイザ
           TextNormalizer.cs          # 全角→半角等のテキスト正規化
@@ -63,6 +66,11 @@ Assets/
     Tests/
       Runtime/
         G2PTests.cs                  # G2P単体テスト
+        HtsLabelParserTests.cs       # HTSラベルパーサーテスト
+        ToneCalculationExtendedTests.cs # 63トーン計算拡張テスト
+        DotNetG2PCompatibilityTests.cs  # dot-net-g2p互換性テスト (50+)
+        Word2PhAndPunctuationTests.cs   # word2ph/句読点テスト (70)
+        DotNetG2PPerformanceTests.cs    # dot-net-g2pパフォーマンステスト
         TokenizerTests.cs            # トークナイザテスト
         InferenceTests.cs            # 推論テスト（要モデル）
         PipelineTests.cs             # E2Eテスト
@@ -226,11 +234,18 @@ uStyleBertVITS2.Tests.Runtime
 
 ```
 TTSPipeline (Services/)
-├── IG2P → JapaneseG2P (TextProcessing/)
-│     ├── OpenJTalkNative (Native/)
-│     ├── SBV2PhonemeMapper
-│     ├── PhonemeUtils
-│     └── TextNormalizer
+├── IG2P (TextProcessing/)
+│     ├── JapaneseG2P              (#if !USBV2_DOTNET_G2P_AVAILABLE)
+│     │     ├── OpenJTalkNative (Native/)
+│     │     ├── SBV2PhonemeMapper
+│     │     ├── PhonemeUtils
+│     │     └── TextNormalizer
+│     └── DotNetG2PJapaneseG2P     (#if USBV2_DOTNET_G2P_AVAILABLE)
+│           ├── HtsLabelParser
+│           ├── SBV2PhonemeMapper
+│           ├── PhonemeUtils
+│           └── TextNormalizer
+├── ProsodyToneCalculator (TextProcessing/) ← 両G2P実装で共有
 ├── BertAligner (TextProcessing/)
 │     └── BertAlignmentJob (Burst)
 ├── SBV2Tokenizer (TextProcessing/)
@@ -241,6 +256,17 @@ TTSPipeline (Services/)
 │     └── LRUCache (Data/)
 └── TTSSettings (Configuration/)
 ```
+
+### G2Pアーキテクチャ
+
+G2P（Grapheme-to-Phoneme）は `IG2P` インターフェースで抽象化され、条件付きコンパイルで実装を切り替える:
+
+| 実装 | 条件 | バックエンド | 特徴 |
+|---|---|---|---|
+| `JapaneseG2P` | `!USBV2_DOTNET_G2P_AVAILABLE` | OpenJTalk P/Invoke | uPiper流用。ネイティブDLL依存 |
+| `DotNetG2PJapaneseG2P` | `USBV2_DOTNET_G2P_AVAILABLE` | dot-net-g2p (純C#) | クロスプラットフォーム。ネイティブDLL不要 |
+
+両実装は `ProsodyToneCalculator` を共有コンポーネントとして使用し、プロソディ情報からトーン値を計算する。`DotNetG2PJapaneseG2P` は `HtsLabelParser` で HTS full context label を解析し、音素・アクセント情報を抽出する。
 
 ### インターフェース設計
 
@@ -253,7 +279,7 @@ using UnityEngine;
 namespace uStyleBertVITS2
 {
     /// <summary>
-    /// G2Pバックエンドの抽象化。OpenJTalk以外のバックエンドへの切替を可能にする。
+    /// G2Pバックエンドの抽象化。OpenJTalk / dot-net-g2p 等のバックエンドを切替可能にする。
     /// </summary>
     public interface IG2P : IDisposable
     {
@@ -462,6 +488,11 @@ public static Model LoadFromStreamingAssets(string relativePath)
 | カテゴリ | Assembly | 内容 | モデル依存 |
 |---|---|---|---|
 | **G2P単体テスト** | Tests.Runtime | 音素変換・トーン生成の正確性 | No (辞書のみ) |
+| **HTSラベルパーサーテスト** | Tests.Runtime | HTS full context label の解析正確性 | No |
+| **トーン計算拡張テスト** | Tests.Runtime | 63パターンのトーン計算検証 | No |
+| **dot-net-g2p互換性テスト** | Tests.Runtime | dot-net-g2p と OpenJTalk の出力互換性 (50+テスト) | No (辞書のみ) |
+| **word2ph/句読点テスト** | Tests.Runtime | word2ph計算・句読点処理 (70テスト) | No |
+| **dot-net-g2pパフォーマンステスト** | Tests.Runtime | dot-net-g2p のパフォーマンス計測 | No |
 | **トークナイザテスト** | Tests.Runtime | DeBERTaトークナイズの正確性 | No (vocab.jsonのみ) |
 | **推論テスト** | Tests.Runtime | BERT/TTSモデル推論のshape検証 | Yes |
 | **E2Eテスト** | Tests.Runtime | テキスト→音声の全パイプライン | Yes |
@@ -530,16 +561,19 @@ namespace uStyleBertVITS2.Tests
 ### バックエンド切替の実現
 
 ```csharp
-// 1. OpenJTalkベースの本番実装
+// 1. OpenJTalkベースの実装 (ネイティブDLL依存)
 IG2P g2p = new JapaneseG2P(dictPath);
 
-// 2. テスト用のモック実装
+// 2. dot-net-g2pベースの実装 (純C#、クロスプラットフォーム)
+IG2P g2p = new DotNetG2PJapaneseG2P(dictPath);
+
+// 3. テスト用のモック実装
 IG2P mockG2p = new MockG2P(predefinedResults);
 
-// 3. リモートAPIベースの実装（Python G2Pサーバー）
+// 4. リモートAPIベースの実装（Python G2Pサーバー）
 IG2P remoteG2p = new RemoteG2P("http://localhost:8080/g2p");
 
-// パイプラインに注入
+// パイプラインに注入 — G2P実装は条件付きコンパイルまたはDIで切替可能
 ITTSPipeline pipeline = new TTSPipeline(g2p, tokenizer, bertRunner, ttsRunner, styleProvider);
 ```
 
@@ -569,8 +603,14 @@ public class TTSPipelineBuilder
 
     public ITTSPipeline Build()
     {
+        // G2P実装は条件付きコンパイルで切替
+#if USBV2_DOTNET_G2P_AVAILABLE
+        _g2p ??= new DotNetG2PJapaneseG2P(
+            Path.Combine(Application.streamingAssetsPath, _settings.DictionaryPath));
+#else
         _g2p ??= new JapaneseG2P(
             Path.Combine(Application.streamingAssetsPath, _settings.DictionaryPath));
+#endif
         _tokenizer ??= new SBV2Tokenizer(
             Path.Combine(Application.streamingAssetsPath, _settings.VocabPath));
         _bertRunner ??= new BertRunner(_settings.BertModel, _settings.BertBackend);
@@ -594,14 +634,16 @@ public class TTSPipelineBuilder
 
 ## uPiperからの流用ガイドライン
 
+> **Note**: dot-net-g2p (`USBV2_DOTNET_G2P_AVAILABLE`) を有効にすると、OpenJTalk ネイティブDLL依存はオプションになる。純C#実装でクロスプラットフォーム対応が可能。
+
 ### 流用対象と変更点
 
-| コンポーネント | 変更内容 |
-|---|---|
-| `OpenJTalkNative.cs` | namespace変更 (`uPiper.Core.Phonemizers.Native` → `uStyleBertVITS2.Native`) |
-| `OpenJTalkConstants.cs` | namespace変更、辞書パスを`TTSSettings`から取得するよう変更 |
-| `TextNormalizer.cs` | namespace変更、`PiperLogger`依存を`Debug.Log`に置換 |
-| `CustomDictionary.cs` | namespace変更 |
+| コンポーネント | 変更内容 | 必須/オプション |
+|---|---|---|
+| `OpenJTalkNative.cs` | namespace変更 (`uPiper.Core.Phonemizers.Native` → `uStyleBertVITS2.Native`) | dot-net-g2p無効時のみ必須 |
+| `OpenJTalkConstants.cs` | namespace変更、辞書パスを`TTSSettings`から取得するよう変更 | dot-net-g2p無効時のみ必須 |
+| `TextNormalizer.cs` | namespace変更、`PiperLogger`依存を`Debug.Log`に置換 | 必須（両実装で使用） |
+| `CustomDictionary.cs` | namespace変更 | オプション |
 
 ### 流用しないもの
 
@@ -614,6 +656,7 @@ public class TTSPipelineBuilder
 ## 注意事項
 
 - **モデルサイズ**: DeBERTa + SBV2 = ~1GBのため、git管理にはGit LFSを使用すること
-- **プラットフォーム制約**: OpenJTalkネイティブライブラリは各プラットフォーム用のビルドが必要。Plugins/以下にプラットフォーム別に配置
+- **プラットフォーム制約**: OpenJTalkネイティブライブラリは各プラットフォーム用のビルドが必要。Plugins/以下にプラットフォーム別に配置。dot-net-g2p有効時はネイティブDLL不要
+- **G2P切替**: `USBV2_DOTNET_G2P_AVAILABLE` シンボルで OpenJTalk / dot-net-g2p を条件付きコンパイルで切替。dot-net-g2p は純C#実装のためクロスプラットフォーム対応が容易
 - **Unity 6互換性**: `using Unity.InferenceEngine;` (旧`Unity.Sentis`)。APIリネームに注意
 - **unsafe code**: `stackalloc`やネイティブメモリ操作のためRuntime asmdefで`allowUnsafeCode: true`が必要

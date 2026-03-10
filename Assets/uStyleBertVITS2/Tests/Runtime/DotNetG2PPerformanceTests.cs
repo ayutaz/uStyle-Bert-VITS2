@@ -1,4 +1,3 @@
-#if USBV2_DOTNET_G2P_AVAILABLE
 using System;
 using System.Diagnostics;
 using NUnit.Framework;
@@ -303,4 +302,3 @@ namespace uStyleBertVITS2.Tests
         }
     }
 }
-#endif

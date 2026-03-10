@@ -276,20 +276,6 @@ namespace uStyleBertVITS2.Tests.Editor
             }
         }
 
-#if !USBV2_DOTNET_G2P_AVAILABLE
-        /// <summary>
-        /// Python: LANGUAGE_ID_MAP["JP"] = 1
-        /// </summary>
-        [Test]
-        public void LanguageId_JapaneseIs1()
-        {
-            var field = typeof(JapaneseG2P).GetField("JapaneseLanguageId",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            Assert.IsNotNull(field, "JapaneseLanguageId field not found");
-            Assert.AreEqual(1, (int)field.GetValue(null));
-        }
-#endif
-
         /// <summary>
         /// Python: 先頭/末尾の境界トークンは PAD ("_", index 0) であること。
         /// SP (index 110) ではない。

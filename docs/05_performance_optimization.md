@@ -72,7 +72,7 @@ public Worker CreateWorkerWithFallback(Model model, BackendType preferred, Backe
 
 | ステージ | GPU (RTX 3060相当) | CPU (Ryzen 5 3600相当) | 備考 |
 |---|---|---|---|
-| G2P (OpenJTalk P/Invoke) | ~10-30ms | ~10-30ms | CPU処理、GPU無関係 |
+| G2P (dot-net-g2p) | ~10-30ms | ~10-30ms | CPU処理、GPU無関係 |
 | DeBERTa トークナイズ | ~1-5ms | ~1-5ms | 文字列処理のみ |
 | DeBERTa 推論 | ~30-40ms | ~150-300ms | 最も重いステージ |
 | word2ph BERT展開 | ~1-5ms | ~1-5ms | メモリコピー主体 |

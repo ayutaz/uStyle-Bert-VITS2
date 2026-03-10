@@ -1,136 +1,9 @@
 using System;
 using NUnit.Framework;
 using uStyleBertVITS2.TextProcessing;
-using uStyleBertVITS2.Native;
 
 namespace uStyleBertVITS2.Tests
 {
-#if !USBV2_DOTNET_G2P_AVAILABLE
-    [TestFixture]
-    [Category("RequiresNativeDLL")]
-    public class G2PTests
-    {
-        private JapaneseG2P _g2p;
-        private bool _available;
-
-        [OneTimeSetUp]
-        public void Setup()
-        {
-            string dictPath = System.IO.Path.Combine(
-                UnityEngine.Application.streamingAssetsPath,
-                OpenJTalkConstants.DefaultDictionaryRelativePath);
-
-            try
-            {
-                _g2p = new JapaneseG2P(dictPath);
-                _available = true;
-            }
-            catch (Exception e)
-            {
-                UnityEngine.Debug.LogWarning(
-                    $"G2P tests skipped: OpenJTalk initialization failed: {e.Message}");
-                _available = false;
-            }
-        }
-
-        private void AssertAvailable()
-        {
-            if (!_available)
-                Assert.Ignore("OpenJTalk native DLL or dictionary not available.");
-        }
-
-        [Test]
-        public void OpenJTalkInitializes()
-        {
-            AssertAvailable();
-            Assert.IsNotNull(_g2p);
-        }
-
-        [Test]
-        public void Process_Konnichiwa_ReturnsPhonemes()
-        {
-            AssertAvailable();
-            var result = _g2p.Process("こんにちは");
-            Assert.IsNotNull(result.PhonemeIds);
-            Assert.IsTrue(result.PhonemeIds.Length > 0, "PhonemeIds should not be empty");
-        }
-
-        [Test]
-        public void Process_ArrayLengthsMatch()
-        {
-            AssertAvailable();
-            var result = _g2p.Process("テスト");
-            Assert.AreEqual(result.PhonemeIds.Length, result.Tones.Length,
-                "PhonemeIds and Tones must have same length");
-            Assert.AreEqual(result.PhonemeIds.Length, result.LanguageIds.Length,
-                "PhonemeIds and LanguageIds must have same length");
-        }
-
-        [Test]
-        public void Process_AllLanguageIdsAreJapanese()
-        {
-            AssertAvailable();
-            var result = _g2p.Process("テスト");
-            foreach (int langId in result.LanguageIds)
-                Assert.AreEqual(1, langId, "JP-Extraでは全言語IDが1(日本語)");
-        }
-
-        [Test]
-        public void Process_Word2PhSumMatchesPhonemeLength()
-        {
-            AssertAvailable();
-            var result = _g2p.Process("東京タワー");
-            int sum = 0;
-            foreach (int w in result.Word2Ph) sum += w;
-            Assert.AreEqual(result.PhonemeIds.Length, sum,
-                "word2ph合計がPhonemeIds.Lengthと一致する必要がある");
-        }
-
-        [Test]
-        public void Process_LongText()
-        {
-            AssertAvailable();
-            string longText = "これは長い文章のテストです。日本語の音声合成システムが正しく動作することを確認します。";
-            var result = _g2p.Process(longText);
-            Assert.IsTrue(result.PhonemeIds.Length > 0);
-            Assert.AreEqual(result.PhonemeIds.Length, result.Tones.Length);
-        }
-
-        [Test]
-        public void Process_Punctuation()
-        {
-            AssertAvailable();
-            var result = _g2p.Process("こんにちは、世界！");
-            Assert.IsTrue(result.PhonemeIds.Length > 0);
-        }
-
-        [Test]
-        public void Dispose_ReleasesNativeResources()
-        {
-            // 新しいインスタンスを作って即Dispose
-            string dictPath = System.IO.Path.Combine(
-                UnityEngine.Application.streamingAssetsPath,
-                OpenJTalkConstants.DefaultDictionaryRelativePath);
-
-            try
-            {
-                using var g2p = new JapaneseG2P(dictPath);
-                // Dispose should not throw
-            }
-            catch (Exception)
-            {
-                Assert.Ignore("OpenJTalk native DLL or dictionary not available.");
-            }
-        }
-
-        [OneTimeTearDown]
-        public void Teardown()
-        {
-            _g2p?.Dispose();
-        }
-    }
-#endif
-
     /// <summary>
     /// SBV2PhonemeMapper 単体テスト（ネイティブDLL不要）。
     /// </summary>
@@ -184,10 +57,8 @@ namespace uStyleBertVITS2.Tests
         }
     }
 
-#if USBV2_DOTNET_G2P_AVAILABLE
     /// <summary>
     /// dot-net-g2p バックエンドの G2P テスト。
-    /// G2PTests と同じテストケースを DotNetG2PJapaneseG2P で実行する。
     /// </summary>
     [TestFixture]
     [Category("DotNetG2P")]
@@ -310,5 +181,4 @@ namespace uStyleBertVITS2.Tests
             _g2p?.Dispose();
         }
     }
-#endif
 }

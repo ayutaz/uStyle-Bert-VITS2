@@ -147,11 +147,12 @@ https://github.com/Cysharp/ZLinq.git?path=src/ZLinq.Unity/Assets/ZLinq.Unity
 **概要**: Rust/CのFFI関数からC# P/Invokeバインディングを自動生成。
 
 **本プロジェクトでの活用**:
-- OpenJTalk P/Invokeの手書きDllImportを自動生成に置き換え
+- OnnxRuntime P/Invokeなどの手書きDllImportを自動生成に置き換え（将来的な検討）
 - プラットフォーム別DLL名の自動切り替え（`csharp_dll_name_if`）
 - 構造体マーシャリングの安全性向上
 
 **注意**: ビルド時にRustツールチェーンが必要（生成されたC#にはRust依存なし）。Unityパッケージではなく、Rust側のビルド依存。
+**Note**: G2P は dot-net-g2p (Pure C#) に移行済みのため、G2P 関連の P/Invoke は不要。
 
 **インストール** (Rustプロジェクト側):
 ```toml

@@ -1,17 +1,19 @@
-# G2P移行計画: OpenJTalk P/Invoke → dot-net-g2p
+# G2P移行記録: OpenJTalk P/Invoke → dot-net-g2p (完了)
 
 ## 概要
 
-現行の G2P (Grapheme-to-Phoneme) 実装を OpenJTalk P/Invoke (`openjtalk_wrapper.dll`) から
-[dot-net-g2p](https://github.com/ayutaz/dot-net-g2p) (Pure C#) に置き換える移行計画。
+G2P (Grapheme-to-Phoneme) 実装を OpenJTalk P/Invoke (`openjtalk_wrapper.dll`) から
+[dot-net-g2p](https://github.com/ayutaz/dot-net-g2p) (Pure C#) に完全移行した。
 
 **目的**: ネイティブ DLL 依存を排除し、クロスプラットフォーム対応を実現する。
 
 **ブランチ**: `feature/dotnet-g2p`
 
+**ステータス**: **完了** -- OpenJTalk は完全に削除され、dot-net-g2p が唯一のG2Pバックエンド。
+
 ---
 
-## 1. 現行アーキテクチャ
+## 1. 旧アーキテクチャ (OpenJTalk, 削除済み)
 
 ```
 テキスト
@@ -24,19 +26,8 @@
   → G2PResult { PhonemeIds[], Tones[], LanguageIds[], Word2Ph[] }
 ```
 
-### 関連ファイル
-
-| ファイル | 役割 |
-|---|---|
-| `IG2P.cs` | G2P インターフェース (`Process(string) → G2PResult`) |
-| `JapaneseG2P.cs` | 現行実装 (OpenJTalk P/Invoke) |
-| `SBV2PhonemeMapper.cs` | 音素 → SBV2 トークンID (112シンボル) |
-| `PhonemeCharacterAligner.cs` | word2ph 計算 (かなテーブル + 比例配分) |
-| `OpenJTalkNative.cs` | P/Invoke 定義 |
-| `OpenJTalkHandle.cs` | SafeHandle |
-| `OpenJTalkConstants.cs` | 辞書パス定数 |
-| `G2PResult.cs` | 出力 readonly struct |
-| `TextNormalizer.cs` | テキスト正規化 |
+> **Note**: 上記の OpenJTalk パイプラインは完全に削除済み。以下のファイルは削除された:
+> `JapaneseG2P.cs`, `OpenJTalkNative.cs`, `OpenJTalkHandle.cs`, `OpenJTalkConstants.cs`, `openjtalk_wrapper.dll`, `OpenJTalkDic/`
 
 ---
 
@@ -278,20 +269,20 @@ public sealed class DotNetG2PJapaneseG2P : IG2P
 
 ---
 
-### Milestone 3: OpenJTalk 依存の条件付きコンパイル化 ✅
+### Milestone 3: OpenJTalk 完全削除 ✅
 
-**方針変更**: 完全削除ではなく、条件付きコンパイル (`#if !USBV2_DOTNET_G2P_AVAILABLE`) で両実装を共存させる。
+**最終方針**: 条件付きコンパイルから完全削除に移行。OpenJTalk 関連のコード・アセット・ドキュメントをすべて削除。
 
 | # | タスク | 変更ファイル | ステータス |
 |---|---|---|---|
-| M3-1 | `JapaneseG2P.cs` を条件付きコンパイル | `#if !USBV2_DOTNET_G2P_AVAILABLE` でラップ | ✅ |
-| M3-2 | `OpenJTalkNative.cs` を条件付きコンパイル | 同上 | ✅ |
-| M3-3 | `OpenJTalkHandle.cs` を条件付きコンパイル | 同上 | ✅ |
-| M3-4 | `OpenJTalkConstants.cs` は維持 | テスト・DotNetG2P で辞書パスに使用 | ✅ (変更不要) |
-| M3-5 | `openjtalk_wrapper.dll` は維持 | フォールバック用に保持 | ✅ (変更不要) |
-| M3-6 | CLAUDE.md の G2P セクション更新 | `CLAUDE.md` | ✅ 条件付きコンパイル情報追記済み |
-
-**注意**: dot-net-g2p が利用可能な場合(`USBV2_DOTNET_G2P_AVAILABLE` 定義時)は DotNetG2PJapaneseG2P が使用され、OpenJTalk コードはコンパイルされない。dot-net-g2p が未導入の場合は従来の JapaneseG2P にフォールバック。
+| M3-1 | `JapaneseG2P.cs` を削除 | 削除 | ✅ |
+| M3-2 | `OpenJTalkNative.cs` を削除 | 削除 | ✅ |
+| M3-3 | `OpenJTalkHandle.cs` を削除 | 削除 | ✅ |
+| M3-4 | `OpenJTalkConstants.cs` を削除 | 削除 | ✅ |
+| M3-5 | `openjtalk_wrapper.dll` を削除 | 削除 | ✅ |
+| M3-6 | `OpenJTalkDic/` を削除 | 削除 | ✅ |
+| M3-7 | 条件コンパイルシンボル `USBV2_DOTNET_G2P_AVAILABLE` を削除 | 各 .cs ファイルから `#if` ガードを除去 | ✅ |
+| M3-8 | CLAUDE.md / docs 更新 | ドキュメントから OpenJTalk 記述を除去 | ✅ |
 
 ---
 
@@ -400,7 +391,9 @@ public sealed class DotNetG2PJapaneseG2P : IG2P
 | `Native/OpenJTalkNative.cs` | P/Invoke 定義 |
 | `Native/OpenJTalkHandle.cs` | SafeHandle |
 | `Native/OpenJTalkConstants.cs` | 辞書パス定数 |
+| `Native/` ディレクトリ | 空ディレクトリ削除 |
 | `Plugins/Windows/x86_64/openjtalk_wrapper.dll` | ネイティブ DLL |
+| `StreamingAssets/uStyleBertVITS2/OpenJTalkDic/` | NAIST JDIC 辞書 |
 
 ### 変更なし (維持)
 

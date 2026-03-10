@@ -3,8 +3,8 @@ using System.Collections.Generic;
 namespace uStyleBertVITS2.TextProcessing
 {
     /// <summary>
-    /// OpenJTalk プロソディ情報 (A1/A2/A3) から SBV2 トーン (0/1) を計算する共有ユーティリティ。
-    /// JapaneseG2P / DotNetG2PJapaneseG2P の両方から使用される。
+    /// プロソディ情報 (A1/A2/A3) から SBV2 トーン (0/1) を計算する共有ユーティリティ。
+    /// DotNetG2PJapaneseG2P から使用される。
     /// </summary>
     internal static class ProsodyToneCalculator
     {

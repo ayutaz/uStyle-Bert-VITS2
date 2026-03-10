@@ -1,4 +1,3 @@
-#if USBV2_DOTNET_G2P_AVAILABLE
 using System;
 using System.Collections.Generic;
 using DotNetG2P;
@@ -201,4 +200,3 @@ namespace uStyleBertVITS2.TextProcessing
         }
     }
 }
-#endif

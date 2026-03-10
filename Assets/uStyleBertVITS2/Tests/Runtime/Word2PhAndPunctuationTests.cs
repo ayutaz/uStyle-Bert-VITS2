@@ -8,9 +8,9 @@ namespace uStyleBertVITS2.Tests
     /// <summary>
     /// Phase 3: word2ph 計算と句読点マッピングのテスト。
     /// Section 1: PhonemeCharacterAligner.ComputeWord2Ph (pure C#, ネイティブDLL不要)
-    /// Section 2: DotNetG2PJapaneseG2P 句読点テスト (requires USBV2_DOTNET_G2P_AVAILABLE)
+    /// Section 2: DotNetG2PJapaneseG2P 句読点テスト
     /// Section 3: TextNormalizer 非干渉テスト (pure C#)
-    /// Section 4: sil/pau スキップ・出力構造検証 (requires USBV2_DOTNET_G2P_AVAILABLE)
+    /// Section 4: sil/pau スキップ・出力構造検証
     /// </summary>
     [TestFixture]
     public class Word2PhAndPunctuationTests
@@ -408,9 +408,8 @@ namespace uStyleBertVITS2.Tests
 
         #endregion
 
-        #region Section 2: DotNetG2P punctuation tests (requires USBV2_DOTNET_G2P_AVAILABLE)
+        #region Section 2: DotNetG2P punctuation tests
 
-#if USBV2_DOTNET_G2P_AVAILABLE
         private DotNetG2PJapaneseG2P _g2p;
         private bool _g2pAvailable;
         private SBV2PhonemeMapper _mapper;
@@ -680,7 +679,6 @@ namespace uStyleBertVITS2.Tests
         {
             _g2p?.Dispose();
         }
-#endif
 
         #endregion
 

@@ -24,7 +24,7 @@ MonoBehaviour:
   DefaultNoiseScale: 0.6
   DefaultNoiseScaleW: 0.8
   DefaultLengthScale: 1
-  DictionaryPath: uStyleBertVITS2/DotNetG2PDic
+  DictionaryPath: uStyleBertVITS2/OpenJTalkDic
   VocabPath: uStyleBertVITS2/Tokenizer/vocab.json
   StyleVectorPath: uStyleBertVITS2/Models/style_vectors.npy
   EnableWarmup: 1

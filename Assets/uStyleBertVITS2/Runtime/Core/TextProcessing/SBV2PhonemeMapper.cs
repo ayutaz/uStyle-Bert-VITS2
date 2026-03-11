@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace uStyleBertVITS2.TextProcessing
 {
     /// <summary>
-    /// OpenJTalk音素名 → SBV2トークンIDへの変換。
+    /// HTS音素名 → SBV2トークンIDへの変換。
     /// SBV2モデルの全言語統合シンボルリスト(n_vocab=112)から辞書を動的構築する。
     /// </summary>
     public class SBV2PhonemeMapper
@@ -35,12 +35,12 @@ namespace uStyleBertVITS2.TextProcessing
         public SBV2PhonemeMapper() : this(DefaultSymbols) { }
 
         /// <summary>
-        /// OpenJTalk音素名をSBV2トークンIDに変換する。
+        /// HTS音素名をSBV2トークンIDに変換する。
         /// </summary>
         public int GetId(string phoneme)
         {
-            // OpenJTalkとSBV2の差異を吸収
-            string mapped = MapOpenJTalkToSBV2(phoneme);
+            // HTS音素名とSBV2シンボル名の差異を吸収
+            string mapped = MapHtsPhonemeToSBV2(phoneme);
             return _phonemeToId.TryGetValue(mapped, out int id) ? id : _unkId;
         }
 
@@ -49,7 +49,7 @@ namespace uStyleBertVITS2.TextProcessing
         /// </summary>
         public bool Contains(string phoneme)
         {
-            string mapped = MapOpenJTalkToSBV2(phoneme);
+            string mapped = MapHtsPhonemeToSBV2(phoneme);
             return _phonemeToId.ContainsKey(mapped);
         }
 
@@ -69,24 +69,24 @@ namespace uStyleBertVITS2.TextProcessing
         public int UnkId => _unkId;
 
         /// <summary>
-        /// OpenJTalk音素名をSBV2シンボル名にマッピングする。
+        /// HTS音素名をSBV2シンボル名にマッピングする。
         /// </summary>
-        private static string MapOpenJTalkToSBV2(string openJTalkPhoneme)
+        private static string MapHtsPhonemeToSBV2(string htsPhoneme)
         {
-            return openJTalkPhoneme switch
+            return htsPhoneme switch
             {
                 "cl" => "q",       // 促音
                 "pau" => "SP",     // ポーズ
                 "sil" => "SP",     // 文頭/文末無音
                 "silB" => "SP",    // 文頭無音
                 "silE" => "SP",    // 文末無音
-                // 無声母音: OpenJTalk は無声化を大文字で表現 → SBV2 は小文字のみ
+                // 無声母音: HTS full context label では無声化を大文字で表現 → SBV2 は小文字のみ
                 "A" => "a",
                 "I" => "i",
                 "U" => "u",
                 "E" => "e",
                 "O" => "o",
-                _ => openJTalkPhoneme
+                _ => htsPhoneme
             };
         }
 

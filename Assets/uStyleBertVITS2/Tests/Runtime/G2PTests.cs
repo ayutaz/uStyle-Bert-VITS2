@@ -72,7 +72,7 @@ namespace uStyleBertVITS2.Tests
         {
             string dictPath = System.IO.Path.Combine(
                 UnityEngine.Application.streamingAssetsPath,
-                "uStyleBertVITS2/DotNetG2PDic");
+                "uStyleBertVITS2/OpenJTalkDic");
             try
             {
                 _g2p = new DotNetG2PJapaneseG2P(dictPath);
@@ -162,7 +162,7 @@ namespace uStyleBertVITS2.Tests
         {
             string dictPath = System.IO.Path.Combine(
                 UnityEngine.Application.streamingAssetsPath,
-                "uStyleBertVITS2/DotNetG2PDic");
+                "uStyleBertVITS2/OpenJTalkDic");
 
             try
             {

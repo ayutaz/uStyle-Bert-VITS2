@@ -421,7 +421,7 @@ namespace uStyleBertVITS2.Tests
 
             string dictPath = System.IO.Path.Combine(
                 UnityEngine.Application.streamingAssetsPath,
-                "uStyleBertVITS2/DotNetG2PDic");
+                "uStyleBertVITS2/OpenJTalkDic");
 
             try
             {

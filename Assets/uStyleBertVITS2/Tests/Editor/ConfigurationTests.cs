@@ -19,7 +19,7 @@ namespace uStyleBertVITS2.Tests.Editor
             Assert.AreEqual(0.6f, settings.DefaultNoiseScale, 1e-6f);
             Assert.AreEqual(0.8f, settings.DefaultNoiseScaleW, 1e-6f);
             Assert.AreEqual(1.0f, settings.DefaultLengthScale, 1e-6f);
-            Assert.AreEqual("uStyleBertVITS2/OpenJTalkDic", settings.DictionaryPath);
+            Assert.AreEqual("uStyleBertVITS2/DotNetG2PDic", settings.DictionaryPath);
             Assert.AreEqual("uStyleBertVITS2/Tokenizer/vocab.json", settings.VocabPath);
             Assert.AreEqual("uStyleBertVITS2/StyleVectors/style_vectors.npy", settings.StyleVectorPath);
             Assert.IsTrue(settings.EnableWarmup);

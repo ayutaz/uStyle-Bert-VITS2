@@ -20,5 +20,5 @@ All notable changes to this project are documented in this file.
 
 ### Notes
 
-- Current scope is Windows x86_64 (OpenJTalk native plugin dependency).
+- G2P engine uses dot-net-g2p (Pure C#, cross-platform, no native DLL dependency).
 - For BERT GPU inference, use ONNX Runtime + DirectML. Sentis BERT should use CPU backend.

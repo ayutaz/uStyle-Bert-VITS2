@@ -275,7 +275,7 @@ namespace uStyleBertVITS2.Tests
             _mapper = new SBV2PhonemeMapper();
             string dictPath = System.IO.Path.Combine(
                 UnityEngine.Application.streamingAssetsPath,
-                "uStyleBertVITS2/OpenJTalkDic");
+                "uStyleBertVITS2/DotNetG2PDic");
             try
             {
                 _g2p = new DotNetG2PJapaneseG2P(dictPath, _mapper);

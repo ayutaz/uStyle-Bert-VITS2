@@ -28,7 +28,7 @@ Issue reporting: https://github.com/ayutaz/uStyle-Bert-VITS2/issues
 - UniTask 2.5.10+
 - ZString 2.6.0+
 - ONNX Runtime (asus4) 0.4.4+ (for ORT+DirectML)
-- Windows x86_64 (OpenJTalk native plugin)
+- Cross-platform (Pure C# G2P, no native DLL dependency)
 
 ## Installation
 
@@ -59,7 +59,7 @@ StreamingAssets/uStyleBertVITS2/
     deberta_model.onnx    # DeBERTa for Sentis (FP32, int32)
     deberta_for_ort.onnx  # DeBERTa for ORT (FP32, int64) *ORT only
     style_vectors.npy
-  OpenJTalkDic/
+  DotNetG2PDic/
     char.bin, left-id.def, matrix.bin, pos-id.def,
     right-id.def, sys.dic, unk.dic, rewrite.def
   Tokenizer/

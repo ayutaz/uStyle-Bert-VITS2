@@ -26,7 +26,7 @@ namespace uStyleBertVITS2.Tests
         {
             string dictPath = System.IO.Path.Combine(
                 UnityEngine.Application.streamingAssetsPath,
-                "uStyleBertVITS2/OpenJTalkDic");
+                "uStyleBertVITS2/DotNetG2PDic");
 
             _mapper = new SBV2PhonemeMapper();
 

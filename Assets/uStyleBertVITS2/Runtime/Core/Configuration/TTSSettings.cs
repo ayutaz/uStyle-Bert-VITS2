@@ -79,7 +79,7 @@ namespace uStyleBertVITS2.Configuration
 
         [Header("Paths (relative to StreamingAssets)")]
         [Tooltip("G2P辞書ディレクトリのパス")]
-        public string DictionaryPath = "uStyleBertVITS2/OpenJTalkDic";
+        public string DictionaryPath = "uStyleBertVITS2/DotNetG2PDic";
 
         [Tooltip("DeBERTaトークナイザ語彙ファイルのパス")]
         public string VocabPath = "uStyleBertVITS2/Tokenizer/vocab.json";

@@ -75,3 +75,6 @@ Assets/StreamingAssets/uStyleBertVITS2/Models/
 Assets/StreamingAssets/uStyleBertVITS2/OpenJTalkDic/
 Assets/StreamingAssets/uStyleBertVITS2/Tokenizer/
 Assets/uStyleBertVITS2/Models/
+
+# Removed native DLL (replaced by dot-net-g2p)
+Assets/uStyleBertVITS2/Plugins/Windows/x86_64/openjtalk_wrapper.dll

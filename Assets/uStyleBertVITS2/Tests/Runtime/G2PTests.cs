@@ -1,15 +1,70 @@
 using System;
 using NUnit.Framework;
 using uStyleBertVITS2.TextProcessing;
-using uStyleBertVITS2.Native;
 
 namespace uStyleBertVITS2.Tests
 {
+    /// <summary>
+    /// SBV2PhonemeMapper 単体テスト（ネイティブDLL不要）。
+    /// </summary>
     [TestFixture]
-    [Category("RequiresNativeDLL")]
-    public class G2PTests
+    public class PhonemeMapperTests
     {
-        private JapaneseG2P _g2p;
+        private SBV2PhonemeMapper _mapper;
+
+        [OneTimeSetUp]
+        public void Setup()
+        {
+            _mapper = new SBV2PhonemeMapper();
+        }
+
+        [Test]
+        public void PhonemeMapper_ClMapsToQ()
+        {
+            // OpenJTalkの "cl"(促音) → SBV2の "q"
+            int qId = _mapper.GetId("q");
+            int clId = _mapper.GetId("cl");
+            Assert.AreEqual(qId, clId, "cl should map to same ID as q (促音)");
+        }
+
+        [Test]
+        public void PhonemeMapper_PauMapsToSP()
+        {
+            // OpenJTalkの "pau"(ポーズ) → SBV2の "SP"
+            int spId = _mapper.SpId;
+            int pauId = _mapper.GetId("pau");
+            Assert.AreEqual(spId, pauId, "pau should map to SP");
+        }
+
+        [Test]
+        public void PhonemeMapper_SpecialSymbolIndices()
+        {
+            // SP と q のインデックスが正しいことを確認（全言語統合112要素リスト）
+            Assert.AreEqual(110, _mapper.SpId, "SP should be at index 110");
+            Assert.AreEqual(73, _mapper.GetId("q"), "q(促音) should be at index 73");
+        }
+
+        [Test]
+        public void BasicPhonemes_Resolve()
+        {
+            // 基本音素がすべて解決できることを確認
+            string[] basics = { "a", "i", "u", "e", "o", "k", "s", "t", "n", "N", "SP" };
+            foreach (string p in basics)
+            {
+                int id = _mapper.GetId(p);
+                Assert.AreNotEqual(_mapper.UnkId, id, $"Phoneme '{p}' should resolve to a known ID");
+            }
+        }
+    }
+
+    /// <summary>
+    /// dot-net-g2p バックエンドの G2P テスト。
+    /// </summary>
+    [TestFixture]
+    [Category("DotNetG2P")]
+    public class DotNetG2PTests
+    {
+        private DotNetG2PJapaneseG2P _g2p;
         private bool _available;
 
         [OneTimeSetUp]
@@ -17,17 +72,16 @@ namespace uStyleBertVITS2.Tests
         {
             string dictPath = System.IO.Path.Combine(
                 UnityEngine.Application.streamingAssetsPath,
-                OpenJTalkConstants.DefaultDictionaryRelativePath);
-
+                "uStyleBertVITS2/OpenJTalkDic");
             try
             {
-                _g2p = new JapaneseG2P(dictPath);
+                _g2p = new DotNetG2PJapaneseG2P(dictPath);
                 _available = true;
             }
             catch (Exception e)
             {
                 UnityEngine.Debug.LogWarning(
-                    $"G2P tests skipped: OpenJTalk initialization failed: {e.Message}");
+                    $"DotNetG2P tests skipped: {e.Message}");
                 _available = false;
             }
         }
@@ -35,11 +89,11 @@ namespace uStyleBertVITS2.Tests
         private void AssertAvailable()
         {
             if (!_available)
-                Assert.Ignore("OpenJTalk native DLL or dictionary not available.");
+                Assert.Ignore("dot-net-g2p dictionary not available.");
         }
 
         [Test]
-        public void OpenJTalkInitializes()
+        public void DotNetG2PInitializes()
         {
             AssertAvailable();
             Assert.IsNotNull(_g2p);
@@ -104,21 +158,20 @@ namespace uStyleBertVITS2.Tests
         }
 
         [Test]
-        public void Dispose_ReleasesNativeResources()
+        public void Dispose_ReleasesResources()
         {
-            // 新しいインスタンスを作って即Dispose
             string dictPath = System.IO.Path.Combine(
                 UnityEngine.Application.streamingAssetsPath,
-                OpenJTalkConstants.DefaultDictionaryRelativePath);
+                "uStyleBertVITS2/OpenJTalkDic");
 
             try
             {
-                using var g2p = new JapaneseG2P(dictPath);
+                using var g2p = new DotNetG2PJapaneseG2P(dictPath);
                 // Dispose should not throw
             }
             catch (Exception)
             {
-                Assert.Ignore("OpenJTalk native DLL or dictionary not available.");
+                Assert.Ignore("dot-net-g2p dictionary not available.");
             }
         }
 
@@ -126,59 +179,6 @@ namespace uStyleBertVITS2.Tests
         public void Teardown()
         {
             _g2p?.Dispose();
-        }
-    }
-
-    /// <summary>
-    /// SBV2PhonemeMapper 単体テスト（ネイティブDLL不要）。
-    /// </summary>
-    [TestFixture]
-    public class PhonemeMapperTests
-    {
-        private SBV2PhonemeMapper _mapper;
-
-        [OneTimeSetUp]
-        public void Setup()
-        {
-            _mapper = new SBV2PhonemeMapper();
-        }
-
-        [Test]
-        public void PhonemeMapper_ClMapsToQ()
-        {
-            // OpenJTalkの "cl"(促音) → SBV2の "q"
-            int qId = _mapper.GetId("q");
-            int clId = _mapper.GetId("cl");
-            Assert.AreEqual(qId, clId, "cl should map to same ID as q (促音)");
-        }
-
-        [Test]
-        public void PhonemeMapper_PauMapsToSP()
-        {
-            // OpenJTalkの "pau"(ポーズ) → SBV2の "SP"
-            int spId = _mapper.SpId;
-            int pauId = _mapper.GetId("pau");
-            Assert.AreEqual(spId, pauId, "pau should map to SP");
-        }
-
-        [Test]
-        public void PhonemeMapper_SpecialSymbolIndices()
-        {
-            // SP と q のインデックスが正しいことを確認（全言語統合112要素リスト）
-            Assert.AreEqual(110, _mapper.SpId, "SP should be at index 110");
-            Assert.AreEqual(73, _mapper.GetId("q"), "q(促音) should be at index 73");
-        }
-
-        [Test]
-        public void BasicPhonemes_Resolve()
-        {
-            // 基本音素がすべて解決できることを確認
-            string[] basics = { "a", "i", "u", "e", "o", "k", "s", "t", "n", "N", "SP" };
-            foreach (string p in basics)
-            {
-                int id = _mapper.GetId(p);
-                Assert.AreNotEqual(_mapper.UnkId, id, $"Phoneme '{p}' should resolve to a known ID");
-            }
         }
     }
 }

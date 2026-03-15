@@ -15,6 +15,15 @@ namespace uStyleBertVITS2.Configuration
     }
 
     /// <summary>
+    /// G2P (Grapheme-to-Phoneme) エンジンの選択。
+    /// </summary>
+    public enum G2PEngineType
+    {
+        /// <summary>dot-net-g2p (Pure C#) を使用。</summary>
+        DotNetG2P = 0,
+    }
+
+    /// <summary>
     /// Style-Bert-VITS2 TTS設定。ScriptableObjectとしてInspectorから設定可能。
     /// </summary>
     [CreateAssetMenu(fileName = "TTSSettings", menuName = "uStyleBertVITS2/TTS Settings")]
@@ -26,6 +35,10 @@ namespace uStyleBertVITS2.Configuration
 
         [Tooltip("SynthesizerTrn ONNX model asset")]
         public ModelAsset TTSModel;
+
+        [Header("G2P")]
+        [Tooltip("G2Pエンジン (dot-net-g2p Pure C#)")]
+        public G2PEngineType G2PEngine = G2PEngineType.DotNetG2P;
 
         [Header("Backend")]
         [Tooltip("BERT推論エンジン (Sentis=従来, OnnxRuntime=DirectML GPU推論)")]
@@ -65,7 +78,7 @@ namespace uStyleBertVITS2.Configuration
         public float DefaultLengthScale = 1.0f;
 
         [Header("Paths (relative to StreamingAssets)")]
-        [Tooltip("OpenJTalk辞書ディレクトリのパス")]
+        [Tooltip("G2P辞書ディレクトリのパス")]
         public string DictionaryPath = "uStyleBertVITS2/OpenJTalkDic";
 
         [Tooltip("DeBERTaトークナイザ語彙ファイルのパス")]

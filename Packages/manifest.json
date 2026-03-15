@@ -17,6 +17,8 @@
   ],
   "dependencies": {
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.10",
+    "com.dotnetg2p.core": "https://github.com/ayutaz/dot-net-g2p.git?path=src/DotNetG2P.Core#v1.0.0",
+    "com.dotnetg2p.mecab": "https://github.com/ayutaz/dot-net-g2p.git?path=src/DotNetG2P.MeCab#v1.0.0",
     "com.github.asus4.onnxruntime": "0.4.4",
     "com.unity.ai.inference": "2.5.0",
     "com.unity.ide.rider": "3.0.38",

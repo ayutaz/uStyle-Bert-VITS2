@@ -25,7 +25,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 0 };
             int[] a3 = { 0, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // pau=0, k=0, o=0, N=1, n=1, i=1, ch=1, i=1, w=1, a=1, pau=0
             Assert.AreEqual(0, tones[0], "pau should be 0");
@@ -56,7 +56,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 0 };
             int[] a3 = { 0, 2, 2, 2, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // pau=0, a=1, m=0, e=0, pau=0
             Assert.AreEqual(0, tones[0], "pau should be 0");
@@ -80,7 +80,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(1, tones[1], "i (1st mora) should be HIGH after FixPhoneTone shift");
@@ -104,7 +104,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 5, 0 };
             int[] a3 = { 0, 5, 4, 4, 3, 2, 2, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(0, tones[1], "o (1st mora) should be LOW");
@@ -129,7 +129,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 4, 4, 0 };
             int[] a3 = { 0, 4, 3, 3, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(0, tones[1], "i (1st mora) should be LOW");
@@ -156,7 +156,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 1, 2, 2, 1, 0 };
             int[] a3 = { 0, 2, 2, 1, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             // 句1: n=1 (HIGH after shift), a=1 (HIGH after shift), m=0 (LOW after shift), a=0 (LOW after shift)
@@ -181,7 +181,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 0 };
             int[] a3 = { 0, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "pau should be 0");
             Assert.AreEqual(0, tones[1], "e (single mora) should be LOW");
@@ -205,7 +205,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a3 = { 0, 5, 5, 4, 3, 3, 2, 2, 1, 1,
                          0, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             // 句1「こんにちは」: 平板型 → LOW, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH, HIGH
             Assert.AreEqual(0, tones[0], "pau should be 0");
@@ -247,7 +247,7 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 0, 1, 0 };
             int[] a3 = { 0, 1, 0, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             Assert.AreEqual(0, tones[0], "sil should be 0");
             Assert.AreEqual(0, tones[2], "pau should be 0");
@@ -267,25 +267,13 @@ namespace uStyleBertVITS2.Tests.Editor
             int[] a2 = { 0, 1, 2, 2, 3, 3, 0 };
             int[] a3 = { 0, 3, 2, 2, 1, 1, 0 };
 
-            int[] tones = JapaneseG2P.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
 
             for (int i = 0; i < tones.Length; i++)
             {
                 Assert.IsTrue(tones[i] == 0 || tones[i] == 1,
                     $"Tone at index {i} ({phonemes[i]}) = {tones[i]}, expected 0 or 1");
             }
-        }
-
-        /// <summary>
-        /// Python: LANGUAGE_ID_MAP["JP"] = 1
-        /// </summary>
-        [Test]
-        public void LanguageId_JapaneseIs1()
-        {
-            var field = typeof(JapaneseG2P).GetField("JapaneseLanguageId",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            Assert.IsNotNull(field, "JapaneseLanguageId field not found");
-            Assert.AreEqual(1, (int)field.GetValue(null));
         }
 
         /// <summary>
@@ -330,6 +318,237 @@ namespace uStyleBertVITS2.Tests.Editor
 
             Assert.AreEqual(12, numZhTones + numJpTones + numEnTones,
                 "NUM_TONES should be 12 (ZH:6 + JP:2 + EN:4)");
+        }
+
+        /// <summary>
+        /// 層1拡張テスト: 複数句 (pau複数境界) での各句のトーン独立処理検証。
+        /// 「え？本当！」のように感嘆符・疑問符で句が分割される場合、
+        /// 各句が独立にトーン計算されることを確認する。
+        /// </summary>
+        [Test]
+        public void Prosody_ExclamationAndQuestion_IndependentPhrases()
+        {
+            // 「え？本当！」を想定（手動構築）
+            // pau 境界が複数ある場合の処理検証
+            string[] phonemes = { "pau", "e", "pau", "h", "o", "N", "t", "o", "u", "pau" };
+            int[] a1 = { 0, 0, 0, -2, -1, -1, 0, 1, 1, 0 };
+            int[] a2 = { 0, 1, 0, 1, 2, 2, 3, 4, 4, 0 };
+            int[] a3 = { 0, 1, 0, 4, 3, 3, 2, 1, 1, 0 };
+
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+
+            // 句1「え」: 単モーラ → 0
+            Assert.AreEqual(0, tones[0], "pau");
+            Assert.AreEqual(0, tones[1], "e (single mora phrase 1)");
+            Assert.AreEqual(0, tones[2], "pau boundary");
+
+            // 句2「本当」: 複数トーン遷移
+            Assert.IsTrue(tones[3] == 0 || tones[3] == 1, "h should be binary");
+            Assert.IsTrue(tones[9] == 0 || tones[9] == 1, "pau should be binary");
+
+            // 全て binary
+            for (int i = 0; i < tones.Length; i++)
+            {
+                Assert.IsTrue(tones[i] == 0 || tones[i] == 1,
+                    $"Tone at {i} = {tones[i]}, expected 0 or 1");
+            }
+        }
+
+        /// <summary>
+        /// 層1拡張テスト: 連続した HIGH モーラ (複数が HIGH) での遷移検証。
+        /// FixPhoneTone による {0, 1} 結果が安定していることを確認する。
+        /// </summary>
+        [Test]
+        public void Prosody_MultipleHighMoras_StableToneTransition()
+        {
+            // 「ああああ」(複数モーラ、平板型)
+            // 実データ想定
+            string[] phonemes = { "pau", "a", "a", "a", "a", "a", "pau" };
+            int[] a1 = { 0, -5, -5, -4, -3, -2, 0 };
+            int[] a2 = { 0, 1, 1, 2, 3, 4, 0 };
+            int[] a3 = { 0, 5, 5, 4, 3, 2, 0 };
+
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+
+            // 1st mora = LOW(0), rest = HIGH(1)
+            Assert.AreEqual(0, tones[0], "pau");
+            Assert.AreEqual(0, tones[1], "a (1st mora) = LOW");
+            Assert.AreEqual(1, tones[2], "a (2nd mora) = HIGH");
+            Assert.AreEqual(1, tones[3], "a (3rd mora) = HIGH");
+            Assert.AreEqual(1, tones[4], "a (4th mora) = HIGH");
+            Assert.AreEqual(1, tones[5], "a (5th mora) = HIGH");
+            Assert.AreEqual(0, tones[6], "pau");
+
+            // 検証: HIGH count = 4
+            int highCount = 0;
+            for (int i = 1; i < 6; i++)
+            {
+                if (tones[i] == 1) highCount++;
+            }
+            Assert.AreEqual(4, highCount, "Expected 4 HIGH tones");
+        }
+
+        /// <summary>
+        /// 層1拡張テスト: 無声化母音 (大文字 A, I, U, E, O) での IsVowelOrNOrCl 判定検証。
+        /// 「です」のように無声化母音が含まれる場合、正しく処理されることを確認。
+        /// </summary>
+        [Test]
+        public void Prosody_VoicelessVowels_CorrectBoundaryDetection()
+        {
+            // 「です」(d, e, s, U) → U は無声化母音
+            // 実データ想定: 頭高型
+            string[] phonemes = { "pau", "d", "e", "s", "U", "pau" };
+            int[] a1 = { 0, 0, 0, 0, 0, 0 };
+            int[] a2 = { 0, 1, 2, 2, 2, 0 };
+            int[] a3 = { 0, 4, 3, 3, 3, 0 };
+
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+
+            // d=1 (HIGH), e=0 (LOW), s=0, U=0
+            Assert.AreEqual(0, tones[0], "pau");
+            Assert.AreEqual(1, tones[1], "d (1st mora) = HIGH");
+            Assert.AreEqual(0, tones[2], "e (after downslope)");
+            Assert.AreEqual(0, tones[3], "s");
+            Assert.AreEqual(0, tones[4], "U (voiceless vowel)");
+            Assert.AreEqual(0, tones[5], "pau");
+
+            // 全て binary
+            for (int i = 0; i < tones.Length; i++)
+            {
+                Assert.IsTrue(tones[i] == 0 || tones[i] == 1,
+                    $"Tone at {i} ({phonemes[i]}) = {tones[i]}, expected 0 or 1");
+            }
+        }
+
+        /// <summary>
+        /// 層1拡張テスト: 促音 (cl - 小さい つ) での IsVowelOrNOrCl 判定検証。
+        /// 「がっこう」のように促音が含まれる場合、句境界判定が正しく動作することを確認。
+        /// </summary>
+        [Test]
+        public void Prosody_GeminateConsonant_CorrectDetection()
+        {
+            // 「がっこう」(g, a, cl, k, o, u)
+            // 実データ想定: 頭高型
+            string[] phonemes = { "pau", "g", "a", "cl", "k", "o", "u", "pau" };
+            int[] a1 = { 0, 0, 0, 0, 0, 0, 0, 0 };
+            int[] a2 = { 0, 1, 2, 2, 3, 3, 3, 0 };
+            int[] a3 = { 0, 3, 2, 2, 1, 1, 1, 0 };
+
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+
+            // g=1 (HIGH), a=0, cl=0, k=0, o=0, u=0
+            Assert.AreEqual(0, tones[0], "pau");
+            Assert.AreEqual(1, tones[1], "g (1st mora) = HIGH");
+            Assert.AreEqual(0, tones[2], "a (1st mora) = LOW");
+            Assert.AreEqual(0, tones[3], "cl (geminate) = LOW");
+            Assert.AreEqual(0, tones[4], "k = LOW");
+            Assert.AreEqual(0, tones[5], "o = LOW");
+            Assert.AreEqual(0, tones[6], "u = LOW");
+            Assert.AreEqual(0, tones[7], "pau");
+
+            // 全て binary
+            for (int i = 0; i < tones.Length; i++)
+            {
+                Assert.IsTrue(tones[i] == 0 || tones[i] == 1,
+                    $"Index {i} = {tones[i]}, expected 0 or 1");
+            }
+        }
+
+        /// <summary>
+        /// 層1拡張テスト: 撥音 (N - ん) での IsVowelOrNOrCl 判定検証。
+        /// 「さん」のような撥音モーラが含まれる場合の正確なトーン計算。
+        /// </summary>
+        [Test]
+        public void Prosody_MoraNAsyllabic_CorrectToneAssignment()
+        {
+            // 「さん」(s, a, N) - 撥音モーラ
+            // 実データ想定: 平板型
+            string[] phonemes = { "pau", "s", "a", "N", "pau" };
+            int[] a1 = { 0, -3, -3, -2, 0 };
+            int[] a2 = { 0, 1, 1, 2, 0 };
+            int[] a3 = { 0, 3, 3, 2, 0 };
+
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+
+            // s=0 (1st mora LOW), a=0 (1st mora), N=1 (2nd mora HIGH)
+            Assert.AreEqual(0, tones[0], "pau");
+            Assert.AreEqual(0, tones[1], "s (1st mora) = LOW");
+            Assert.AreEqual(0, tones[2], "a (1st mora) = LOW");
+            Assert.AreEqual(1, tones[3], "N (2nd mora) = HIGH");
+            Assert.AreEqual(0, tones[4], "pau");
+
+            // 全て binary
+            for (int i = 0; i < tones.Length; i++)
+            {
+                Assert.IsTrue(tones[i] == 0 || tones[i] == 1,
+                    $"Index {i} = {tones[i]}, expected 0 or 1");
+            }
+        }
+
+        /// <summary>
+        /// 層1拡張テスト: FixPhoneTone の {-1, 0} → {0, 1} シフトが複数回呼ばれるケース。
+        /// 複数のアクセント句がそれぞれ負値を含む場合、各句で正規化されることを検証。
+        /// </summary>
+        [Test]
+        public void Prosody_MultipleFixPhoneTone_EachPhraseNormalized()
+        {
+            // 2つの短いアクセント句が連続
+            // 句1: 「い」(i) - 単モーラ → tone=0
+            // 句2: 「の」(n, o) - 頭高型 → 累積{-1, -1} → FixPhoneTone で {0, 1} に正規化
+            string[] phonemes = { "pau", "i", "pau", "n", "o", "pau" };
+            int[] a1 = { 0, 0, 0, 0, 0, 0 };
+            int[] a2 = { 0, 1, 0, 1, 2, 0 };
+            int[] a3 = { 0, 1, 0, 2, 2, 0 };
+
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+
+            // 句1: i=0
+            Assert.AreEqual(0, tones[0], "pau");
+            Assert.AreEqual(0, tones[1], "i (single mora)");
+            Assert.AreEqual(0, tones[2], "pau");
+
+            // 句2: n=1 (HIGH after shift), o=0 (LOW after shift)
+            Assert.AreEqual(1, tones[3], "n (1st mora phrase 2, HIGH after FixPhoneTone)");
+            Assert.AreEqual(0, tones[4], "o (2nd mora, LOW after FixPhoneTone)");
+            Assert.AreEqual(0, tones[5], "pau");
+
+            // 全て binary
+            for (int i = 0; i < tones.Length; i++)
+            {
+                Assert.IsTrue(tones[i] == 0 || tones[i] == 1,
+                    $"Index {i} = {tones[i]}, expected 0 or 1");
+            }
+        }
+
+        /// <summary>
+        /// 層1拡張テスト: 極端な長文での複数のプロソディ遷移検証。
+        /// 複数の下降 (]) と上昇 ([) が交互に発生する長いテキストの処理。
+        /// </summary>
+        [Test]
+        public void Prosody_ComplexAccentPattern_MultipleTransitions()
+        {
+            // 「さっぽろし」(札幌市) - 複数モーラの中高型
+            // 実データ想定: 複数の ] 判定が発生する
+            string[] phonemes = { "pau", "s", "a", "p", "p", "o", "r", "o", "sh", "i", "pau" };
+            int[] a1 = { 0, -3, -3, -2, -2, -1, -1, 0, 1, 1, 0 };
+            int[] a2 = { 0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 0 };
+            int[] a3 = { 0, 5, 5, 4, 4, 3, 3, 2, 1, 1, 0 };
+
+            int[] tones = ProsodyToneCalculator.ComputeTonesFromProsody(phonemes, a1, a2, a3, phonemes.Length);
+
+            // 検証: 最初の音素は LOW, 中間で HIGH, 最後は LOW の遷移
+            Assert.AreEqual(0, tones[0], "pau");
+            Assert.AreEqual(0, tones[1], "s (1st mora) = LOW");
+            // 中間で複数の ] (下降) が検出されると tone-=1 が複数回
+            // 最終的には {0, 1} に正規化される
+            Assert.AreEqual(0, tones[10], "pau");
+
+            // 全て binary
+            for (int i = 0; i < tones.Length; i++)
+            {
+                Assert.IsTrue(tones[i] == 0 || tones[i] == 1,
+                    $"Index {i} ({phonemes[i]}) = {tones[i]}, expected 0 or 1");
+            }
         }
     }
 }

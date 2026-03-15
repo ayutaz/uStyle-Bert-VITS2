@@ -8,7 +8,9 @@
         "Unity.Burst",
         "Unity.Collections",
         "Unity.Jobs",
-        "com.github.asus4.onnxruntime"
+        "com.github.asus4.onnxruntime",
+        "DotNetG2P",
+        "DotNetG2P.MeCab"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -28,7 +28,7 @@ Issue 報告: https://github.com/ayutaz/uStyle-Bert-VITS2/issues
 - UniTask 2.5.10+
 - ZString 2.6.0+
 - ONNX Runtime (asus4) 0.4.4+（ORT+DirectML を使う場合）
-- Windows x86_64（OpenJTalk ネイティブプラグイン）
+- クロスプラットフォーム対応（Pure C# G2P、ネイティブDLL不要）
 
 ## Installation
 
@@ -118,6 +118,7 @@ pipeline.Dispose();
 | `TTSBackend` | `GPUCompute` | TTS推論はGPU推奨 |
 | `UseDirectML` | `true` | ORT時にDirectML (GPU) を有効化 |
 | `DirectMLDeviceId` | `0` | 使用GPUのデバイスID |
+| `G2PEngine` | `DotNetG2P` | Pure C# G2P（ネイティブDLL不要） |
 
 推奨構成: `BERT=OnnxRuntime(DirectML) + TTS=GPUCompute`
 

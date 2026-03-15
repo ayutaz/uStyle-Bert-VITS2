@@ -20,6 +20,10 @@ namespace uStyleBertVITS2.Editor
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Validation", EditorStyles.boldLabel);
 
+            // G2P エンジンバリデーション
+            EditorGUILayout.HelpBox("G2P Engine: dot-net-g2p (Pure C#)", MessageType.Info);
+            ValidatePath("G2P Dictionary", settings.DictionaryPath);
+
             // BERT エンジン別バリデーション
             if (settings.BertEngineType == BertEngine.Sentis)
             {

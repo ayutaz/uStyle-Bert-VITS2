@@ -281,7 +281,7 @@ public static void NormalizeBurst(float[] samples, float targetPeak = 0.95f)
 |---|---|---|
 | BertAlignmentJob | 互換 | NativeArray + 数値演算のみ |
 | AudioNormalizationJob | 互換 | NativeArray + 数値演算のみ |
-| G2P (OpenJTalk P/Invoke) | **非互換** | マネージド文字列、P/Invoke呼び出し |
+| G2P (dot-net-g2p) | **非互換** | マネージド文字列処理 |
 | SBV2Tokenizer | **非互換** | Dictionary、文字列処理 |
 | Sentis Worker操作 | **非互換** | マネージドAPI |
 
@@ -485,11 +485,13 @@ public class CharTokenizer
 
 ---
 
-## P/Invoke最適化
+## P/Invoke最適化 (歴史的参考)
+
+> **Note**: OpenJTalk P/Invoke は dot-net-g2p (Pure C#) への移行に伴い削除済み。以下はネイティブ P/Invoke 最適化の参考情報として残す。
 
 ### UTF-8バッファプーリング
 
-OpenJTalk P/InvokeではマネージドC#文字列をUTF-8に変換してネイティブに渡す。uPiperで実証済みのバッファプーリングパターン：
+P/InvokeではマネージドC#文字列をUTF-8に変換してネイティブに渡す。バッファプーリングパターン：
 
 ```csharp
 using System.Buffers;
@@ -776,8 +778,8 @@ Unity Profilerの **Memory** モジュールで以下を監視：
   - NG: > 5MB/call（バッファ再利用なし）
 - **GPU Memory**: VRAM使用量
   - 目標: < 1.5GB（DeBERTa + SBV2 + バッファ）
-- **Native Memory**: OpenJTalkのネイティブメモリ
-  - SafeHandleで確実に解放されていることを確認
+- **Managed Memory**: dot-net-g2p のマネージドメモリ
+  - IDisposable で確実に解放されていることを確認
 
 ---
 

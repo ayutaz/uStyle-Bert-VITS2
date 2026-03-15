@@ -1,59 +1,11 @@
-# G2P実装ガイド (uPiperベース + SBV2拡張)
+# G2P実装ガイド (dot-net-g2p + SBV2拡張)
 
 ## 概要
 
 日本語テキストから Style-Bert-VITS2 が必要とする入力テンソルを生成するパイプライン。
-uPiperのOpenJTalk P/Invoke基盤を流用し、SBV2固有の音素マッピング・DeBERTaトークナイザを新規実装する。
+G2Pバックエンドには **dot-net-g2p** (Pure C#) を使用する。ネイティブDLL不要でクロスプラットフォーム対応。
 
----
-
-## uPiperからの流用コンポーネント
-
-| コンポーネント | uPiperパス | 流用方法 |
-|---|---|---|
-| OpenJTalkNative | `Runtime/Core/Phonemizers/Native/OpenJTalkNative.cs` | namespace変更して流用 |
-| OpenJTalkConstants | `Runtime/Core/Phonemizers/OpenJTalkConstants.cs` | namespace変更して流用 |
-| TextNormalizer | `Runtime/Core/Phonemizers/Text/TextNormalizer.cs` | namespace変更して流用 |
-| CustomDictionary | `Runtime/Core/Phonemizers/CustomDictionary.cs` | namespace変更して流用 |
-| openjtalk_wrapper.dll | `Plugins/Windows/x86_64/` | バイナリコピー |
-| NAIST JDIC辞書 | `Samples~/OpenJTalk Dictionary Data/naist_jdic/` | StreamingAssetsにコピー |
-
-### 流用時の変更点
-
-**namespace変更**: `uPiper.Core.Phonemizers.*` → `uStyleBertVits2.G2P.*`
-
-**依存の置き換え**:
-- `uPiper.Core.Logging.PiperLogger` → `UnityEngine.Debug.Log` に置き換え or 独自Logger作成
-- `ITextNormalizer` インターフェース → TextNormalizerを直接使用で可
-- `BasePhonemizer` → 不要（SBV2用の独自テキストプロセッサを作成）
-
-### OpenJTalkNative.cs の構造（参考）
-
-```
-OpenJTalkNative (static class)
-├── NativePhonemeResult (struct)     - 音素結果
-├── NativeProsodyPhonemeResult       - プロソディ付き音素結果
-├── openjtalk_create(dictPath)       - 初期化
-├── openjtalk_destroy(handle)        - 破棄
-├── openjtalk_phonemize(handle, text, out result) - 音素変換
-├── openjtalk_phonemize_with_prosody(handle, text, out result) - プロソディ付き
-└── プラットフォーム別DLL名定義
-    ├── iOS: "__Internal"
-    └── その他: "openjtalk_wrapper"
-```
-
-プロソディ機能(`openjtalk_phonemize_with_prosody`)が重要。SBV2のトーン（アクセント）情報抽出に使う。
-
-### 辞書ファイル一覧 (OpenJTalkConstants.cs)
-
-必須8ファイル（NAIST JDIC）:
-- `sys.dic` (103MB) — システム辞書
-- `unk.dic` — 未知語辞書
-- `char.bin` — 文字定義
-- `matrix.bin` (3.7MB) — 接続コスト行列
-- `left-id.def`, `right-id.def` — ID定義
-- `pos-id.def` — 品詞タグ定義
-- `rewrite.def` — 書き換えルール
+SBV2 固有の音素マッピング・DeBERTa トークナイザと組み合わせて使用する。
 
 ---
 
@@ -74,25 +26,26 @@ SBV2モデルの全言語統合シンボルリスト（112シンボル, n_vocab=
 
 **実装方針**:
 - ハードコードされた DefaultSymbols テーブル（112要素）から音素→ID辞書を構築。config.json は不要。
-- OpenJTalkの出力音素をSBV2シンボル名にマッピング
-- Piperと異なりPUA変換は不要（SBV2はOpenJTalk音素をほぼそのまま使用）
+- dot-net-g2p の出力音素をSBV2シンボル名にマッピング
 
 #### マッピングの注意点
 
-OpenJTalk出力とSBV2シンボルの差異:
-- OpenJTalkの `cl`（促音） → SBV2の `q`（促音記号）
-- OpenJTalkの `pau`（ポーズ） → SBV2の `SP`（無音記号）
-- OpenJTalkの `sil`（文頭/文末無音） → SBV2の `SP` or 省略
-- 長音記号の扱い: OpenJTalkは母音の後に `:` を付ける場合あり
+G2P出力とSBV2シンボルの差異:
+- `cl`（促音） → SBV2の `q`（促音記号）
+- `pau`（ポーズ） → SBV2の `SP`（無音記号）
+- `sil`/`silB`/`silE`（文頭/文末無音） → SBV2の `SP` or 省略
+- 長音記号の扱い: 母音の後に `:` を付ける場合あり
 
 ### 2. トーン（アクセント）配列生成
 
 sbv2-apiの `crates/sbv2_core/src/jtalk.rs` の `g2p_prosody()` を参考:
 
-- OpenJTalkのプロソディ情報（A1/A2/A3）からトーン値を計算
+- HTS full context labels のプロソディ情報（A1/A2/A3）からトーン値を計算
 - 基本ルール: アクセント核以前=1(High)、以後=0(Low)
 - SBV2ではトーン値に+6のオフセットを加える（`tones` テンソルの値域は0〜）
 - 句読点・無音には tone=0
+
+**実装**: トーン計算ロジックは `ProsodyToneCalculator` クラスに抽出され、`DotNetG2PJapaneseG2P` から使用される（→ [ProsodyToneCalculator](#prosodytonecalculator--プロソディトーン計算) セクション参照）。
 
 ```
 例: "こんにちは" (アクセント型: LHHHH → 平板型)
@@ -174,24 +127,26 @@ word2ph =     [1,  2,  1,  2,  1,  2,  0 ]
   │
   ├──→ [TextNormalizer] 全角→半角等
   │      │
-  │      ├──→ [CustomDictionary] ユーザー辞書適用
+  │      ├──→ [dot-net-g2p] MeCab形態素解析 + HTS full context labels 生成
   │      │      │
-  │      │      └──→ [OpenJTalk P/Invoke] 形態素解析+音素変換
+  │      │      ├──→ [HtsLabelParser] A1/A2/A3 プロソディ値抽出
+  │      │      │
+  │      │      ├──→ [ProsodyToneCalculator] トーン計算
+  │      │      │
+  │      │      └──→ [SBV2PhonemeMapper] 音素→SBV2トークンID
   │      │             │
-  │      │             └──→ [SBV2PhonemeMapper]
+  │      │             ├── phoneme_ids[]  (int32)
+  │      │             ├── tones[]        (int32)
+  │      │             ├── language_ids[]  (int32)
+  │      │             └── word2ph[]       (int[])
+  │      │             │
+  │      │             └──→ [PhonemeUtils.Intersperse]
+  │      │                    │  add_blank: 各音素間に blank(0) を挿入
+  │      │                    │  [a, b, c] → [0, a, 0, b, 0, c, 0]
   │      │                    │
-  │      │                    ├── phoneme_ids[]  (int32)
-  │      │                    ├── tones[]        (int32)
-  │      │                    ├── language_ids[]  (int32)
-  │      │                    └── word2ph[]       (int[])
-  │      │                    │
-  │      │                    └──→ [PhonemeUtils.Intersperse]
-  │      │                           │  add_blank: 各音素間に blank(0) を挿入
-  │      │                           │  [a, b, c] → [0, a, 0, b, 0, c, 0]
-  │      │                           │
-  │      │                           ├── phoneme_ids[]  (int32, 2N+1)
-  │      │                           ├── tones[]        (int32, 2N+1)
-  │      │                           └── language_ids[]  (int32, 2N+1)
+  │      │                    ├── phoneme_ids[]  (int32, 2N+1)
+  │      │                    ├── tones[]        (int32, 2N+1)
+  │      │                    └── language_ids[]  (int32, 2N+1)
   │      │
   │      └──→ [SBV2Tokenizer] DeBERTa用文字レベルトークナイズ
   │             │
@@ -218,19 +173,14 @@ word2ph =     [1,  2,  1,  2,  1,  2,  0 ]
 ```
 Assets/uStyleBertVITS2/
   Runtime/Core/
-    Native/
-      OpenJTalkNative.cs            (uPiper流用, namespace変更)
-      OpenJTalkConstants.cs         (uPiper流用, namespace変更)
     TextProcessing/
-      TextNormalizer.cs             (uPiper流用, namespace変更)
-      SBV2PhonemeMapper.cs          (OpenJTalk音素→SBV2トークンID)
-      JapaneseG2P.cs                (パイプライン統合)
+      TextNormalizer.cs             (テキスト正規化)
+      SBV2PhonemeMapper.cs          (音素→SBV2トークンID)
+      DotNetG2PJapaneseG2P.cs       (dot-net-g2p G2P実装)
+      HtsLabelParser.cs             (HTS full context label パーサー)
+      ProsodyToneCalculator.cs      (トーン計算ユーティリティ)
       SBV2Tokenizer.cs              (DeBERTa用文字レベルトークナイザ)
-  Plugins/
-    Windows/x86_64/
-      openjtalk_wrapper.dll         (uPiperからコピー)
   StreamingAssets/
-    OpenJTalkDic/                   (NAIST JDIC辞書 8ファイル)
     Tokenizer/
       vocab.json                    (DeBERTaトークナイザ語彙)
 ```
@@ -250,14 +200,210 @@ sbv2-apiでは `jpreprocess` (OpenJTalkのRust実装) を使用:
   → phoneme_ids, tones, word2ph 生成
 ```
 
-C#での実装は OpenJTalk ネイティブP/Invoke で同等機能を実現。
-`openjtalk_phonemize_with_prosody()` がプロソディ(A1/A2/A3)を返すため、
+C#での実装は dot-net-g2p (Pure C# MeCab + G2PEngine) で同等機能を実現。
+`G2PEngine.ToFullContextLabels()` が HTS ラベル (A1/A2/A3) を返すため、
 sbv2-apiの `g2p_prosody()` と同等のトーン計算が可能。
 
 ---
 
 ## 注意事項
 
-- **OpenJTalk辞書サイズ**: sys.dic が 103MB あるため、ビルドサイズに注意。圧縮配布も検討
-- **word2phのアライメント精度**: DeBERTaのトークナイズ結果とOpenJTalkの単語境界が一致しない可能性がある。SBV2のPython実装 (`get_bert_feature` 関数) のアライメント方法を忠実に移植すること
+- **MeCab辞書サイズ**: sys.dic が 103MB あるため、ビルドサイズに注意。圧縮配布も検討
+- **word2phのアライメント精度**: DeBERTaのトークナイズ結果とG2Pの単語境界が一致しない可能性がある。SBV2のPython実装 (`get_bert_feature` 関数) のアライメント方法を忠実に移植すること
 - **tone値のオフセット**: sbv2-apiでは tone+6 を行っている。モデル学習時の仕様に合わせること
+
+---
+
+## dot-net-g2p G2P実装
+
+### 概要
+
+dot-net-g2p は Pure C# で形態素解析・音素変換を行うライブラリ。ネイティブ DLL 不要でクロスプラットフォーム対応。
+
+内部では `MeCabTokenizer` (C# MeCab 実装) と `G2PEngine` で形態素解析から HTS full context labels の生成まで行い、その後 SBV2 パイプライン（SBV2PhonemeMapper, PhonemeCharacterAligner 等）で処理する。
+
+### DotNetG2PJapaneseG2P の処理パイプライン
+
+`DotNetG2PJapaneseG2P` クラス (`IG2P` を実装) の `Process(text)` メソッドは以下の6ステップで動作する:
+
+```
+1. TextNormalizer.Normalize()
+   テキスト正規化（全角→半角変換等）。
+   G2PEngine 側のテキスト正規化は G2POptions(enableTextNormalization: false) で無効化し、
+   二重正規化を防止。
+
+2. G2PEngine.ToFullContextLabels(text)
+   MeCabTokenizer による形態素解析 → HTS full context labels を生成。
+   戻り値: IReadOnlyList<string> (各ラベルが1音素に対応)
+
+3. HtsLabelParser.ParseAll(labels, ...)
+   各 HTS ラベルから音素名と A1/A2/A3 プロソディ値を抽出。
+   出力: string[] rawPhonemes, int[] a1, int[] a2, int[] a3
+
+4. ProsodyToneCalculator.ComputeTonesFromProsody()
+   A1/A2/A3 からプロソディ遷移を検出し、各音素のトーン (0/1) を計算。
+   JapaneseG2P と共有される共通ユーティリティ。
+
+5. SBV2PhonemeMapper
+   音素名を SBV2 トークン ID に変換。句読点は MapPunctuationToSBV2() で
+   テキスト中の文字→句読点キューを構築し、pau 位置でデキューして挿入。
+
+6. PhonemeCharacterAligner.ComputeWord2Ph()
+   テキストと音素列長から word2ph を計算。
+```
+
+### 句読点処理 (MapPunctuationToSBV2)
+
+dot-net-g2p の HTS ラベルでは句読点が直接音素として出力されない（`pau` として出現する）。
+`DotNetG2PJapaneseG2P` はテキストを先にスキャンして句読点の SBV2 ID をキューに蓄え、
+音素列中の `pau` に遭遇するたびにキューから対応する句読点 ID をデキューして挿入する:
+
+```csharp
+// テキストから句読点キューを構築
+var punctQueue = new Queue<int>();
+foreach (char c in text)
+{
+    int pid = MapPunctuationToSBV2(c);
+    if (pid >= 0) punctQueue.Enqueue(pid);
+}
+
+// pau 位置でデキューして句読点を復元
+if (phoneme == "pau" && punctQueue.Count > 0)
+    phonemeIds.Add(punctQueue.Dequeue());
+```
+
+句読点マッピング:
+
+| 入力文字 | SBV2 シンボル |
+|---|---|
+| `、`, `,`, `，` | `,` |
+| `。`, `.`, `．` | `.` |
+| `!`, `！` | `!` |
+| `?`, `？` | `?` |
+| `…` | `…` |
+| `・` | `,` (中黒はコンマにフォールバック) |
+
+### コンストラクタ
+
+```csharp
+// 基本コンストラクタ: MeCab辞書パスを指定
+var g2p = new DotNetG2PJapaneseG2P(dictPath);
+
+// SBV2PhonemeMapper 共有版
+var g2p = new DotNetG2PJapaneseG2P(dictPath, sharedMapper);
+```
+
+- `dictPath`: MeCab 辞書ディレクトリ (NAIST JDIC 等) のパス
+- `G2POptions(enableTextNormalization: false)` で dot-net-g2p 側のテキスト正規化を無効化。`TextNormalizer.Normalize()` による正規化のみ使用
+
+---
+
+## HtsLabelParser
+
+### 概要
+
+`HtsLabelParser` は HTS full context labels をパースして音素名と A1/A2/A3 プロソディ値を抽出する static ユーティリティクラス。`DotNetG2PJapaneseG2P` が `G2PEngine.ToFullContextLabels()` の出力をパースする際に使用する。
+
+### HTS full context label 形式
+
+```
+p2^p1-c+n1=n2/A:a1+a2+a3/B:b1-b2_b3/C:c1_c2+c3/...
+```
+
+- **音素コンテキスト部** (最初の `/` 以前): `p2^p1-c+n1=n2`
+  - `p2`: 2つ前の音素
+  - `p1`: 1つ前の音素
+  - `c`: 現在の音素
+  - `n1`: 1つ後の音素
+  - `n2`: 2つ後の音素
+- **プロソディ部**: `/A:a1+a2+a3/B:.../C:...` 等のセクション
+
+### ParsePhoneme
+
+`-` と `+` の間が現在の音素名:
+
+```
+例: "xx^sil-k+o=N/A:-3+1+7/B:..."
+     → ParsePhoneme() = "k"
+```
+
+### ParseA
+
+`/A:` セクションから `a1+a2+a3` を `+` 区切りで抽出:
+
+```
+例: "/A:-3+1+7/" → a1=-3, a2=1, a3=7
+    "/A:xx+xx+xx/" → a1=0, a2=0, a3=0 (sil/pau)
+```
+
+**A フィールドの意味:**
+
+| フィールド | 意味 | 計算式 |
+|---|---|---|
+| a1 | アクセント核相対位置 | `moraPos - accent + 1` |
+| a2 | 句内前方位置 (1始まり) | `moraPos + 1` |
+| a3 | 句内後方位置 | `moraCount - moraPos` |
+
+- `sil`/`pau` では `"xx+xx+xx"` → すべて 0 として返す
+- a1 は負値になり得る（例: `-3+1+4`）
+
+### ParseAll
+
+一括パースメソッド。HTS ラベル列から音素名配列と A1/A2/A3 配列をまとめて抽出:
+
+```csharp
+HtsLabelParser.ParseAll(labels, out string[] phonemes,
+    out int[] a1, out int[] a2, out int[] a3);
+```
+
+---
+
+## ProsodyToneCalculator — プロソディトーン計算
+
+### 概要
+
+`ProsodyToneCalculator` は HTS プロソディ情報 (A1/A2/A3) から SBV2 トーン (0/1) を計算するユーティリティ。`DotNetG2PJapaneseG2P` から使用される。
+
+Python の `__pyopenjtalk_g2p_prosody()` + `__g2phone_tone_wo_punct()` を C# に移植した実装。
+
+### アルゴリズム
+
+`ComputeTonesFromProsody(rawPhonemes, a1, a2, a3, count)` は以下のロジックで動作:
+
+1. **句境界検出**: `sil`/`pau` に遭遇したらアクセント句バッファを確定し、tone=0 をセット
+2. **プロソディ記号検出** (隣接する A2/A3 の変化から):
+   - **`#` (句境界)**: `a3[i]==1 && a2[i+1]==1 && IsVowelOrNOrCl(ph)` → バッファ確定・リセット
+   - **`]` (下降)**: `a1[i]==0 && a2[i+1]==a2[i]+1 && a2[i]!=a3[i]` → `currentTone -= 1`
+   - **`[` (上昇)**: `a2[i]==1 && a2[i+1]==2` → `currentTone += 1`
+3. **currentTone** 状態変数を管理し、各音素に累積トーンを割り当て
+
+### FixPhoneTone — 正規化
+
+アクセント句内のトーン集合を {0, 1} に正規化する:
+
+| 入力トーン集合 | 処理 |
+|---|---|
+| {0, 1} | そのまま |
+| {-1, 0} | 全体を +1 シフト → {0, 1} |
+| {0} のみ | そのまま (全て 0) |
+
+### IsVowelOrNOrCl
+
+句境界判定 (`#`) に使用。Python の `p3 in "aeiouAEIOUNcl"` を移植:
+
+- 母音: `a`, `i`, `u`, `e`, `o` (大文字=無声化含む)
+- 撥音: `N`
+- 促音: `cl`
+
+---
+
+## G2P ファイル配置
+
+```
+Assets/uStyleBertVITS2/
+  Runtime/Core/
+    TextProcessing/
+      DotNetG2PJapaneseG2P.cs       (dot-net-g2p G2P実装)
+      HtsLabelParser.cs             (HTS ラベルパーサー)
+      ProsodyToneCalculator.cs      (トーン計算ユーティリティ)
+```

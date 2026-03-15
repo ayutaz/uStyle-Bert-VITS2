@@ -24,8 +24,10 @@ Assets/
           TTSWarmup.cs               # 起動時ウォームアップ推論
         TextProcessing/
           IG2P.cs                    # G2Pインターフェース
-          JapaneseG2P.cs             # OpenJTalkベースG2P実装
-          SBV2PhonemeMapper.cs       # OpenJTalk音素→SBV2トークンID
+          DotNetG2PJapaneseG2P.cs    # dot-net-g2pベースG2P実装（Pure C#）
+          ProsodyToneCalculator.cs   # ComputeTonesFromProsody トーン計算ユーティリティ
+          HtsLabelParser.cs          # HTS full context label パーサー
+          SBV2PhonemeMapper.cs       # 音素→SBV2トークンID
           SBV2Tokenizer.cs           # DeBERTa用文字レベルトークナイザ
           TextNormalizer.cs          # 全角→半角等のテキスト正規化
           PhonemeUtils.cs            # 音素ユーティリティ
@@ -45,10 +47,6 @@ Assets/
           ITTSPipeline.cs            # パイプラインインターフェース
           TTSPipelineBuilder.cs      # Builder パターンによる構築
           TTSRequestQueue.cs         # リクエストキュー管理
-        Native/
-          OpenJTalkNative.cs         # OpenJTalk P/Invoke (uPiper流用)
-          OpenJTalkConstants.cs      # 辞書パス定数 (uPiper流用)
-          OpenJTalkHandle.cs         # OpenJTalkハンドル管理
         Diagnostics/
           TTSDebugLog.cs             # デバッグログユーティリティ
         Data/
@@ -63,6 +61,11 @@ Assets/
     Tests/
       Runtime/
         G2PTests.cs                  # G2P単体テスト
+        HtsLabelParserTests.cs       # HTSラベルパーサーテスト
+        ToneCalculationExtendedTests.cs # 63トーン計算拡張テスト
+        DotNetG2PCompatibilityTests.cs  # dot-net-g2p互換性テスト (50+)
+        Word2PhAndPunctuationTests.cs   # word2ph/句読点テスト (70)
+        DotNetG2PPerformanceTests.cs    # dot-net-g2pパフォーマンステスト
         TokenizerTests.cs            # トークナイザテスト
         InferenceTests.cs            # 推論テスト（要モデル）
         PipelineTests.cs             # E2Eテスト
@@ -71,24 +74,13 @@ Assets/
         ModelImportTests.cs          # ONNXインポートテスト
         ConfigurationTests.cs        # 設定バリデーション
         uStyleBertVITS2.Tests.Editor.asmdef
-    Plugins/
-      Windows/x86_64/
-        openjtalk_wrapper.dll        # OpenJTalkネイティブライブラリ
-      macOS/
-        libopenjtalk_wrapper.dylib
-      Linux/x86_64/
-        libopenjtalk_wrapper.so
-      Android/
-        libs/
-          arm64-v8a/
-            libopenjtalk_wrapper.so
     Samples~/
       BasicTTS/
         SampleScene.unity
         SBV2TTSDemo.cs
     StreamingAssets/
       uStyleBertVITS2/
-        OpenJTalkDic/                # NAIST JDIC辞書 (8ファイル)
+        OpenJTalkDic/                # MeCab辞書 (NAIST JDIC)
         Tokenizer/
           vocab.json                 # DeBERTa語彙
         Models/
@@ -104,7 +96,6 @@ Assets/
 |---|---|
 | **Runtime/Editor/Tests分離** | Assembly Definitionで明確に分離。Editor APIがRuntimeに混入しない |
 | **Core以下の機能分割** | Inference, TextProcessing, Audio, Configuration, Services |
-| **Native分離** | P/Invoke呼び出しを`Native/`に集約。プラットフォーム差異を局所化 |
 | **Samples~隠蔽** | `~`サフィックスでUnity Editorのインポート対象外。Package Manager経由で展開 |
 
 ---
@@ -123,7 +114,9 @@ Assets/
         "Unity.InferenceEngine",
         "UniTask",
         "UniTask.Linq",
-        "Unity.Burst"
+        "Unity.Burst",
+        "DotNetG2P",
+        "DotNetG2P.MeCab"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -138,6 +131,7 @@ Assets/
 - `Unity.InferenceEngine` — Sentis 2.5.0の実際のアセンブリ名
 - `UniTask` / `UniTask.Linq` — 非同期パイプライン (Cysharp UniTask)
 - `Unity.Burst` — BertAlignmentJob, NormalizeAudioJob 等の Burst ジョブ
+- `DotNetG2P` / `DotNetG2P.MeCab` — dot-net-g2p G2Pエンジン (Pure C#)
 
 #### 2. Editor (`uStyleBertVITS2.Editor.asmdef`)
 
@@ -169,7 +163,9 @@ Assets/
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "UniTask",
-        "UniTask.Linq"
+        "UniTask.Linq",
+        "DotNetG2P",
+        "DotNetG2P.MeCab"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -209,13 +205,15 @@ uStyleBertVITS2.Tests.Editor
          └──→ uStyleBertVITS2.Runtime
                 ├──→ Unity.InferenceEngine
                 ├──→ UniTask / UniTask.Linq
-                └──→ Unity.Burst
+                ├──→ Unity.Burst
+                └──→ DotNetG2P / DotNetG2P.MeCab
 
 uStyleBertVITS2.Tests.Runtime
   ├──→ uStyleBertVITS2.Runtime
   ├──→ Unity.Collections
   ├──→ UniTask / UniTask.Linq
-  └──→ Unity.InferenceEngine
+  ├──→ Unity.InferenceEngine
+  └──→ DotNetG2P / DotNetG2P.MeCab
 ```
 
 ---
@@ -226,11 +224,13 @@ uStyleBertVITS2.Tests.Runtime
 
 ```
 TTSPipeline (Services/)
-├── IG2P → JapaneseG2P (TextProcessing/)
-│     ├── OpenJTalkNative (Native/)
-│     ├── SBV2PhonemeMapper
-│     ├── PhonemeUtils
-│     └── TextNormalizer
+├── IG2P (TextProcessing/)
+│     └── DotNetG2PJapaneseG2P
+│           ├── HtsLabelParser
+│           ├── SBV2PhonemeMapper
+│           ├── PhonemeUtils
+│           └── TextNormalizer
+├── ProsodyToneCalculator (TextProcessing/)
 ├── BertAligner (TextProcessing/)
 │     └── BertAlignmentJob (Burst)
 ├── SBV2Tokenizer (TextProcessing/)
@@ -241,6 +241,12 @@ TTSPipeline (Services/)
 │     └── LRUCache (Data/)
 └── TTSSettings (Configuration/)
 ```
+
+### G2Pアーキテクチャ
+
+G2P（Grapheme-to-Phoneme）は `IG2P` インターフェースで抽象化される。唯一の実装として `DotNetG2PJapaneseG2P` (dot-net-g2p, Pure C#) を使用する。ネイティブDLL不要でクロスプラットフォーム対応。
+
+`DotNetG2PJapaneseG2P` は `HtsLabelParser` で HTS full context label を解析し、音素・アクセント情報を抽出する。`ProsodyToneCalculator` でプロソディ情報からトーン値を計算する。
 
 ### インターフェース設計
 
@@ -253,7 +259,7 @@ using UnityEngine;
 namespace uStyleBertVITS2
 {
     /// <summary>
-    /// G2Pバックエンドの抽象化。OpenJTalk以外のバックエンドへの切替を可能にする。
+    /// G2Pバックエンドの抽象化。テスト用モック等への差し替えを可能にする。
     /// </summary>
     public interface IG2P : IDisposable
     {
@@ -462,6 +468,11 @@ public static Model LoadFromStreamingAssets(string relativePath)
 | カテゴリ | Assembly | 内容 | モデル依存 |
 |---|---|---|---|
 | **G2P単体テスト** | Tests.Runtime | 音素変換・トーン生成の正確性 | No (辞書のみ) |
+| **HTSラベルパーサーテスト** | Tests.Runtime | HTS full context label の解析正確性 | No |
+| **トーン計算拡張テスト** | Tests.Runtime | 63パターンのトーン計算検証 | No |
+| **dot-net-g2p互換性テスト** | Tests.Runtime | dot-net-g2p の出力正確性検証 (50+テスト) | No (辞書のみ) |
+| **word2ph/句読点テスト** | Tests.Runtime | word2ph計算・句読点処理 (70テスト) | No |
+| **dot-net-g2pパフォーマンステスト** | Tests.Runtime | dot-net-g2p のパフォーマンス計測 | No |
 | **トークナイザテスト** | Tests.Runtime | DeBERTaトークナイズの正確性 | No (vocab.jsonのみ) |
 | **推論テスト** | Tests.Runtime | BERT/TTSモデル推論のshape検証 | Yes |
 | **E2Eテスト** | Tests.Runtime | テキスト→音声の全パイプライン | Yes |
@@ -484,7 +495,7 @@ namespace uStyleBertVITS2.Tests
         public void Setup()
         {
             string dictPath = Path.Combine(Application.streamingAssetsPath, "uStyleBertVITS2/OpenJTalkDic");
-            _g2p = new JapaneseG2P(dictPath);
+            _g2p = new DotNetG2PJapaneseG2P(dictPath);
         }
 
         [Test]
@@ -530,8 +541,8 @@ namespace uStyleBertVITS2.Tests
 ### バックエンド切替の実現
 
 ```csharp
-// 1. OpenJTalkベースの本番実装
-IG2P g2p = new JapaneseG2P(dictPath);
+// 1. dot-net-g2pベースの実装 (純C#、クロスプラットフォーム)
+IG2P g2p = new DotNetG2PJapaneseG2P(dictPath);
 
 // 2. テスト用のモック実装
 IG2P mockG2p = new MockG2P(predefinedResults);
@@ -539,7 +550,7 @@ IG2P mockG2p = new MockG2P(predefinedResults);
 // 3. リモートAPIベースの実装（Python G2Pサーバー）
 IG2P remoteG2p = new RemoteG2P("http://localhost:8080/g2p");
 
-// パイプラインに注入
+// パイプラインに注入 — IG2P インターフェースでDI可能
 ITTSPipeline pipeline = new TTSPipeline(g2p, tokenizer, bertRunner, ttsRunner, styleProvider);
 ```
 
@@ -569,7 +580,7 @@ public class TTSPipelineBuilder
 
     public ITTSPipeline Build()
     {
-        _g2p ??= new JapaneseG2P(
+        _g2p ??= new DotNetG2PJapaneseG2P(
             Path.Combine(Application.streamingAssetsPath, _settings.DictionaryPath));
         _tokenizer ??= new SBV2Tokenizer(
             Path.Combine(Application.streamingAssetsPath, _settings.VocabPath));
@@ -592,28 +603,11 @@ public class TTSPipelineBuilder
 
 ---
 
-## uPiperからの流用ガイドライン
-
-### 流用対象と変更点
-
-| コンポーネント | 変更内容 |
-|---|---|
-| `OpenJTalkNative.cs` | namespace変更 (`uPiper.Core.Phonemizers.Native` → `uStyleBertVITS2.Native`) |
-| `OpenJTalkConstants.cs` | namespace変更、辞書パスを`TTSSettings`から取得するよう変更 |
-| `TextNormalizer.cs` | namespace変更、`PiperLogger`依存を`Debug.Log`に置換 |
-| `CustomDictionary.cs` | namespace変更 |
-
-### 流用しないもの
-
-- `BasePhonemizer` — SBV2用に`IG2P`インターフェースを新規定義
-- `PiperModel`/`PiperTTS` — SBV2固有のパイプラインを構築
-- ONNX変換スクリプト — SBV2専用の変換スクリプトを使用（`docs/01_onnx_export.md`参照）
-
 ---
 
 ## 注意事項
 
 - **モデルサイズ**: DeBERTa + SBV2 = ~1GBのため、git管理にはGit LFSを使用すること
-- **プラットフォーム制約**: OpenJTalkネイティブライブラリは各プラットフォーム用のビルドが必要。Plugins/以下にプラットフォーム別に配置
+- **G2P**: dot-net-g2p (Pure C#) を使用。ネイティブDLL不要でクロスプラットフォーム対応
 - **Unity 6互換性**: `using Unity.InferenceEngine;` (旧`Unity.Sentis`)。APIリネームに注意
 - **unsafe code**: `stackalloc`やネイティブメモリ操作のためRuntime asmdefで`allowUnsafeCode: true`が必要

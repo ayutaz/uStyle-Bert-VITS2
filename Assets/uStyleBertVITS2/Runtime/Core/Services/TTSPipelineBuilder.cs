@@ -67,8 +67,11 @@ namespace uStyleBertVITS2.Services
                 throw new System.InvalidOperationException(
                     "TTSSettings must be provided via WithSettings().");
 
-            _g2p ??= new JapaneseG2P(
-                Path.Combine(Application.streamingAssetsPath, _settings.DictionaryPath));
+            if (_g2p == null)
+            {
+                string dictPath = Path.Combine(Application.streamingAssetsPath, _settings.DictionaryPath);
+                _g2p = new DotNetG2PJapaneseG2P(dictPath);
+            }
 
             _tokenizer ??= new SBV2Tokenizer(
                 Path.Combine(Application.streamingAssetsPath, _settings.VocabPath));

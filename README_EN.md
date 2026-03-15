@@ -59,7 +59,7 @@ StreamingAssets/uStyleBertVITS2/
     deberta_model.onnx    # DeBERTa for Sentis (FP32, int32)
     deberta_for_ort.onnx  # DeBERTa for ORT (FP32, int64) *ORT only
     style_vectors.npy
-  DotNetG2PDic/
+  OpenJTalkDic/
     char.bin, left-id.def, matrix.bin, pos-id.def,
     right-id.def, sys.dic, unk.dic, rewrite.def
   Tokenizer/
@@ -118,6 +118,7 @@ Key `TTSSettings` fields:
 | `TTSBackend` | `GPUCompute` | GPU recommended for TTS |
 | `UseDirectML` | `true` | Enables DirectML when using ORT |
 | `DirectMLDeviceId` | `0` | GPU device ID |
+| `G2PEngine` | `DotNetG2P` | Pure C# G2P (no native DLL) |
 
 Recommended: `BERT=OnnxRuntime(DirectML) + TTS=GPUCompute`
 

@@ -80,6 +80,7 @@ Assets/
         SBV2TTSDemo.cs
     StreamingAssets/
       uStyleBertVITS2/
+        OpenJTalkDic/                # MeCab辞書 (NAIST JDIC)
         Tokenizer/
           vocab.json                 # DeBERTa語彙
         Models/
@@ -113,7 +114,9 @@ Assets/
         "Unity.InferenceEngine",
         "UniTask",
         "UniTask.Linq",
-        "Unity.Burst"
+        "Unity.Burst",
+        "DotNetG2P",
+        "DotNetG2P.MeCab"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -128,6 +131,7 @@ Assets/
 - `Unity.InferenceEngine` — Sentis 2.5.0の実際のアセンブリ名
 - `UniTask` / `UniTask.Linq` — 非同期パイプライン (Cysharp UniTask)
 - `Unity.Burst` — BertAlignmentJob, NormalizeAudioJob 等の Burst ジョブ
+- `DotNetG2P` / `DotNetG2P.MeCab` — dot-net-g2p G2Pエンジン (Pure C#)
 
 #### 2. Editor (`uStyleBertVITS2.Editor.asmdef`)
 
@@ -159,7 +163,9 @@ Assets/
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "UniTask",
-        "UniTask.Linq"
+        "UniTask.Linq",
+        "DotNetG2P",
+        "DotNetG2P.MeCab"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
@@ -199,13 +205,15 @@ uStyleBertVITS2.Tests.Editor
          └──→ uStyleBertVITS2.Runtime
                 ├──→ Unity.InferenceEngine
                 ├──→ UniTask / UniTask.Linq
-                └──→ Unity.Burst
+                ├──→ Unity.Burst
+                └──→ DotNetG2P / DotNetG2P.MeCab
 
 uStyleBertVITS2.Tests.Runtime
   ├──→ uStyleBertVITS2.Runtime
   ├──→ Unity.Collections
   ├──→ UniTask / UniTask.Linq
-  └──→ Unity.InferenceEngine
+  ├──→ Unity.InferenceEngine
+  └──→ DotNetG2P / DotNetG2P.MeCab
 ```
 
 ---
@@ -384,7 +392,7 @@ namespace uStyleBertVITS2.Configuration
         [Range(0.5f, 2f)] public float DefaultLengthScale = 1.0f;
 
         [Header("Paths (relative to StreamingAssets)")]
-        public string DictionaryPath = "uStyleBertVITS2/MeCabDic";
+        public string DictionaryPath = "uStyleBertVITS2/OpenJTalkDic";
         public string VocabPath = "uStyleBertVITS2/Tokenizer/vocab.json";
         public string StyleVectorPath = "uStyleBertVITS2/Models/style_vectors.npy";
 
@@ -486,7 +494,7 @@ namespace uStyleBertVITS2.Tests
         [OneTimeSetUp]
         public void Setup()
         {
-            string dictPath = Path.Combine(Application.streamingAssetsPath, "uStyleBertVITS2/MeCabDic");
+            string dictPath = Path.Combine(Application.streamingAssetsPath, "uStyleBertVITS2/OpenJTalkDic");
             _g2p = new DotNetG2PJapaneseG2P(dictPath);
         }
 

@@ -233,6 +233,7 @@ Assets/uStyleBertVITS2/
       SampleScene.unity
   StreamingAssets/
     uStyleBertVITS2/
+      OpenJTalkDic/                # MeCab辞書 (NAIST JDIC, 8ファイル)
       Tokenizer/vocab.json         # DeBERTa語彙
       Models/                      # ONNXモデル
         sbv2_model.onnx

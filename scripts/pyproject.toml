@@ -1,7 +1,7 @@
 [project]
-name = "scripts"
+name = "ustyle-bert-vits2-scripts"
 version = "0.1.0"
-description = "Add your description here"
+description = "ONNX export and validation scripts for uStyle-Bert-VITS2 (Style-Bert-VITS2 -> Unity Sentis)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "numpy>=1.24,<2.3",

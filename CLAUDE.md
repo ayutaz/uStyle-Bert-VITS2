@@ -9,7 +9,6 @@ Style-Bert-VITS2（日本語TTS）のモデルをONNXに変換し、Unity Sentis
 - **Unity バージョン**: 6000.3.6f1 (Unity 6)
 - **推論エンジン**: Unity AI Inference (Sentis) 2.5.0 (`com.unity.ai.inference`)
 - **非同期**: UniTask (Cysharp)
-- **文字列**: ZString (Cysharp)
 - **元モデル**: [Style-Bert-VITS2](https://github.com/litagin02/Style-Bert-VITS2) — VITS2ベースの日本語音声合成（JP-Extra版）
 - **言語**: C# (Unity側), Python (ONNX変換側)
 
@@ -18,7 +17,6 @@ Style-Bert-VITS2（日本語TTS）のモデルをONNXに変換し、Unity Sentis
 以下のパッケージは `manifest.json` に追加済み:
 - `com.unity.ai.inference: 2.5.0` (Sentis)
 - UniTask (UPM Git URL)
-- ZString (UPM Git URL)
 
 手動でのセットアップは不要。
 

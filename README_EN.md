@@ -26,9 +26,8 @@ Issue reporting: https://github.com/ayutaz/uStyle-Bert-VITS2/issues
 - Unity 6000.3.6f1 (Unity 6) or later
 - Unity AI Inference (Sentis) 2.5.0
 - UniTask 2.5.10+
-- ZString 2.6.0+
 - ONNX Runtime (asus4) 0.4.4+ (for ORT+DirectML)
-- Windows x86_64 (OpenJTalk native plugin)
+- Windows x86_64 (OpenJTalk native plugin `openjtalk_wrapper.dll`; it is not bundled in this repository, so place it under `Assets/uStyleBertVITS2/Plugins/Windows/x86_64/` separately)
 
 ## Installation
 
@@ -44,7 +43,7 @@ Issue reporting: https://github.com/ayutaz/uStyle-Bert-VITS2/issues
 }
 ```
 
-Sentis is resolved as a dependency. Install UniTask / ZString / ONNX Runtime separately.
+Sentis is resolved as a dependency. Install UniTask / ONNX Runtime separately.
 
 ### 2) Place required assets
 
